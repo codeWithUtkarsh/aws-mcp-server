@@ -60,6 +60,7 @@ tests/
 # Development tools
 .ruff_cache/
 .mypy_cache/
+.aider*
 
 # OS
 .DS_Store

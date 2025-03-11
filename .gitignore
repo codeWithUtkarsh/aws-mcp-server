@@ -90,5 +90,6 @@ aws_credentials
 *.local.yml
 *.local.yaml
 local_settings.py
+.aider*
 
 # Docker - keeping .dockerignore in git since it's a config file
