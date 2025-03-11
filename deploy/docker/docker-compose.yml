@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   aws-mcp-server:
@@ -6,17 +6,16 @@ services:
     build:
       context: .
     # Alternatively, use the pre-built multi-arch image
-    # image: ghcr.io/yourusername/aws-mcp-server:latest
+    # image: ghcr.io/alexei-led/aws-mcp-server:latest
     ports:
       - "8000:8000"
     volumes:
-      - ~/.aws:/root/.aws:ro  # Mount AWS credentials as read-only
+      - ~/.aws:/root/.aws:ro # Mount AWS credentials as read-only
     environment:
-      - AWS_PROFILE=default   # Specify default AWS profile
-      - AWS_MCP_TIMEOUT=30     # Default timeout in seconds
+      - AWS_PROFILE=default # Specify default AWS profile
+      - AWS_MCP_TIMEOUT=30 # Default timeout in seconds
       # - AWS_MCP_MAX_OUTPUT=10000  # Uncomment to set max output size
     restart: unless-stopped
-
 # To build multi-architecture images:
 # 1. Set up Docker buildx: docker buildx create --name mybuilder --use
 # 2. Build and push the multi-arch image:

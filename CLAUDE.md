@@ -1,6 +1,7 @@
 # AWS MCP Server Development Guide
 
 ## Build & Test Commands
+
 - Install dependencies: `pip install -e .`
 - Install dev dependencies: `pip install -e ".[dev]"`
 - Run server: `python -m aws_mcp_server`
@@ -11,6 +12,7 @@
 - Format code: `ruff format src/ tests/`
 
 ## Technical Stack
+
 - **Python version**: Python 3.13+
 - **Project config**: `pyproject.toml` for configuration and dependency management
 - **Environment**: Use virtual environment in `.venv` for dependency isolation
@@ -20,6 +22,7 @@
 - **Project layout**: Organize code with `src/` layout
 
 ## Code Style Guidelines
+
 - **Formatting**: Black-compatible formatting via `ruff format`
 - **Imports**: Sort imports with `ruff` (stdlib, third-party, local)
 - **Type hints**: Use native Python type hints (e.g., `list[str]` not `List[str]`)
@@ -29,6 +32,7 @@
 - **PEP 8**: Follow PEP 8 style guide (enforced via `ruff`)
 
 ## Python Best Practices
+
 - **File handling**: Prefer `pathlib.Path` over `os.path`
 - **Debugging**: Use `logging` module instead of `print`
 - **Error handling**: Use specific exceptions with context messages and proper logging
@@ -40,6 +44,7 @@
 - **Security**: Never store/log AWS credentials, set command timeouts
 
 ## Development Patterns & Best Practices
+
 - **Favor simplicity**: Choose the simplest solution that meets requirements
 - **DRY principle**: Avoid code duplication; reuse existing functionality
 - **Configuration management**: Use environment variables for different environments
@@ -55,6 +60,7 @@
 - **Dependency management**: Add libraries only when essential
 
 ## Development Workflow
+
 - **Version control**: Commit frequently with clear messages
 - **Impact assessment**: Evaluate how changes affect other codebase areas
 - **Documentation**: Keep documentation up-to-date for complex logic and features

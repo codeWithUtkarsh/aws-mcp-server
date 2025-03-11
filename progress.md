@@ -65,6 +65,7 @@
 ## Updates and Revisions
 
 ### MCP SDK Update (First Iteration)
+
 - Updated the implementation to use the official MCP Python SDK (package name: `mcp`)
 - Modified the server initialization to use the latest SDK conventions
 - Updated tool registration to use ToolDefinition objects
@@ -72,17 +73,20 @@
 - Updated tests to work with the new SDK structure
 
 ### MCP SDK Update (Second Iteration)
+
 - Completely refactored to use FastMCP high-level API
 - Simplified implementation by using decorators for tool registration
 - Removed separate tool modules in favor of a single server module
 - Streamlined server startup with FastMCP's transport management
 
 ### Dependency Management Improvements
+
 - Separated runtime and development dependencies in pyproject.toml
 - Created distinct dependency groups: 'test' and 'lint'
 - Updated README.md with instructions for installing different dependency groups
 
 ### Python 3.13 and Modern Syntax
+
 - Updated code to use Python 3.13 syntax features
 - Replaced imported types (List, Dict, etc.) with built-in type annotations (list, dict)
 - Used union types with pipe operator (str | None) instead of Optional
@@ -90,6 +94,7 @@
 - Updated ruff configuration for Python 3.13 compatibility
 
 ### CI/CD Integration
+
 - Added GitHub Actions workflows for continuous integration and deployment
 - Created separate workflows for CI, development, and release
 - Set up Docker image building and publishing to GitHub Container Registry

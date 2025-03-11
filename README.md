@@ -29,7 +29,7 @@ The AWS MCP Server provides a bridge between MCP-aware AI assistants (like Claud
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/aws-mcp-server.git
+git clone https://github.com/alexei-led/aws-mcp-server.git
 cd aws-mcp-server
 
 # Build and run Docker container
@@ -39,18 +39,20 @@ cd deploy/docker && docker-compose up -d
 The Docker image supports both AMD64/x86_64 (Intel/AMD) and ARM64 (Apple Silicon M1-M4, AWS Graviton) architectures.
 
 > **Note**: The official image from GitHub Packages is multi-architecture and will automatically use the appropriate version for your system.
+>
 > ```bash
 > # Use the latest stable version
-> docker pull ghcr.io/yourusername/aws-mcp-server:latest
+> docker pull ghcr.io/alexei-led/aws-mcp-server:latest
 > 
 > # Or pin to a specific version (recommended for production)
-> docker pull ghcr.io/yourusername/aws-mcp-server:1.0.0
+> docker pull ghcr.io/alexei-led/aws-mcp-server:1.0.0
 > 
 > # Or use major.minor version for automatic patch updates
-> docker pull ghcr.io/yourusername/aws-mcp-server:1.0
+> docker pull ghcr.io/alexei-led/aws-mcp-server:1.0
 > ```
-> 
+>
 > **Docker Image Tags**:
+>
 > - `latest`: Latest stable release
 > - `x.y.z` (e.g., `1.0.0`): Specific version (recommended for production)
 > - `x.y` (e.g., `1.0`): Specific major and minor version
@@ -61,7 +63,7 @@ The Docker image supports both AMD64/x86_64 (Intel/AMD) and ARM64 (Apple Silicon
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/aws-mcp-server.git
+git clone https://github.com/alexei-led/aws-mcp-server.git
 cd aws-mcp-server
 
 # Set up virtual environment
@@ -119,10 +121,13 @@ The project includes integration tests that verify AWS MCP Server works correctl
 
 1. Create an S3 bucket for testing (or use an existing one)
 2. Set the environment variable with your test bucket name:
+
    ```bash
    export AWS_TEST_BUCKET=your-test-bucket-name
    ```
+
 3. Ensure your AWS credentials are configured:
+
    ```bash
    aws configure
    # OR
@@ -142,6 +147,7 @@ pytest --run-integration -m integration
 ```
 
 The integration tests will:
+
 - Test AWS CLI help command functionality
 - List S3 buckets in your account
 - Create, upload, download, and delete a test file in your specified S3 bucket
