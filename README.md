@@ -205,6 +205,82 @@ The project includes GitHub Actions workflows:
 - **Development**: Runs on pushes to non-main branches and manual dispatch
 - **Release**: Publishes multi-architecture Docker image (AMD64 and ARM64) and PyPI package when a new release is created
 
+## Claude Desktop Integration
+
+The AWS MCP Server can be easily integrated with Claude Desktop to enable AI-assisted AWS CLI operations.
+
+### Setting Up Claude Desktop with AWS MCP Server
+
+1. **Install Claude Desktop**:
+   - Download and install [Claude Desktop](https://claude.ai/download) for your platform
+
+2. **Start the AWS MCP Server**:
+   - Start the server using Docker:
+     ```bash
+     docker-compose up -d
+     ```
+   - Or run it directly:
+     ```bash
+     python -m aws_mcp_server --tcp --host 0.0.0.0 --port 8000
+     ```
+
+3. **Connect Claude Desktop to the AWS MCP Server**:
+   - Open Claude Desktop
+   - Click on the settings icon (⚙️) in the top right corner
+   - Select "Servers" from the menu
+   - Click "Add Server"
+   - Enter the following details:
+     - **Name**: AWS CLI
+     - **URL**: `http://localhost:8000` (or the appropriate host/port if different)
+     - **Description**: AWS CLI commands and documentation
+   - Click "Add Server"
+
+4. **Using AWS CLI with Claude**:
+   - Start a new conversation in Claude Desktop
+   - Claude will now have access to the AWS MCP Server tools
+   - You can ask Claude to:
+     - Get documentation for AWS services: "Show me documentation for AWS S3 commands"
+     - Execute AWS CLI commands: "List my S3 buckets" or "Show me my EC2 instances in us-west-2"
+     - Help with AWS CLI syntax: "How do I copy files between S3 buckets?"
+
+### Example Interactions
+
+**Getting AWS CLI Documentation**:
+```
+User: What are the available options for the AWS S3 cp command?
+
+Claude: Let me get that information for you.
+
+[Claude uses the describe_command tool to fetch AWS S3 cp documentation]
+
+The AWS S3 cp command has the following options:
+
+NAME
+    cp - Copies a local file or S3 object to another location locally or in S3.
+
+SYNOPSIS
+    cp <LocalPath> <S3Uri> or <S3Uri> <LocalPath> or <S3Uri> <S3Uri> [--acl <value>] [--cache-control <value>] [--content-disposition <value>] [--content-encoding <value>] [--content-language <value>] [--content-type <value>] [--copy-props <value>] [--dryrun] [--grants <value>] [--only-show-errors] [--quiet] [--recursive] [--request-payer <value>] [--source-region <value>] [--storage-class <value>] [--sse <value>] [--sse-c <value>] [--sse-c-key <value>] [--sse-kms-key-id <value>] [--metadata <value>] [--metadata-directive <value>] [--expected-size <value>] [--page-size <value>] [--checksum <value>] [--checksum-algorithm <value>]
+```
+
+**Executing AWS CLI Commands**:
+```
+User: List my S3 buckets
+
+Claude: I'll list your S3 buckets for you.
+
+[Claude uses the execute_command tool to run "aws s3 ls"]
+
+2023-10-15 14:30:45 my-bucket-1
+2023-11-20 09:15:32 my-bucket-2
+2024-01-05 11:22:18 my-backup-bucket
+```
+
+### Troubleshooting
+
+- **Authentication Issues**: Ensure your AWS credentials are properly configured on the host running the AWS MCP Server
+- **Connection Errors**: Verify the server is running and the URL in Claude Desktop is correct
+- **Permission Errors**: Check that your AWS credentials have the necessary permissions for the commands you're trying to execute
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

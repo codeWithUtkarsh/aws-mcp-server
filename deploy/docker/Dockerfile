@@ -26,15 +26,8 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 
-# Install the package
+# Install the package with all dependencies
 RUN pip install --no-cache-dir -e .
 
-# Install the official MCP CLI tools
-RUN pip install "mcp[cli]"
-
 # Set command to run the server
-# Option 1: Using the built-in server
 ENTRYPOINT ["python", "-m", "aws_mcp_server", "--tcp", "--host", "0.0.0.0"]
-
-# Option 2: Using MCP CLI (uncomment below and comment above to use this option)
-# ENTRYPOINT ["mcp", "run", "src/aws_mcp_server/server.py", "--host", "0.0.0.0"]
