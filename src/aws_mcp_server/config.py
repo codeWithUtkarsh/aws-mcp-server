@@ -24,6 +24,7 @@ SERVER_CAPABILITIES: Dict[str, Any] = {"tools": {}}
 # Command execution settings
 DEFAULT_TIMEOUT: int = int(os.environ.get("AWS_MCP_TIMEOUT", "30"))  # Default timeout in seconds
 MAX_OUTPUT_SIZE: int = int(os.environ.get("AWS_MCP_MAX_OUTPUT", "10000"))  # Max output size in characters
+MAX_CALLS_PER_SECOND: int = int(os.environ.get("AWS_MCP_RATE_LIMIT", "5"))  # Max API calls per second
 
 # AWS CLI settings
 AWS_PROFILE: str = os.environ.get("AWS_PROFILE", "default")

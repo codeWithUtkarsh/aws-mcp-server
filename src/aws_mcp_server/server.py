@@ -14,6 +14,7 @@ from .utils.cli_executor import (
     CommandHelpResult,
     CommandResult,
     CommandValidationError,
+    check_aws_cli_installed,
     execute_aws_command,
     get_command_help,
 )
@@ -26,8 +27,18 @@ logging.basicConfig(
 logger = logging.getLogger("aws-mcp-server")
 
 
+# Check if AWS CLI is installed
+async def check_aws_cli():
+    """Check if AWS CLI is installed and exit if not."""
+    if not await check_aws_cli_installed():
+        logger.error("AWS CLI is not installed or not in PATH. Please install AWS CLI.")
+        sys.exit(1)
+
 # Create the FastMCP server
 mcp = FastMCP("AWS MCP Server")
+
+# Schedule the AWS CLI check to run when the event loop is available
+asyncio.create_task(check_aws_cli())
 
 
 @mcp.tool()

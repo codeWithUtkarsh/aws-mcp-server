@@ -52,8 +52,16 @@ def format_table_output(text: str) -> str:
 
     # Add a separator line after the header
     if len(lines) > 1:
-        formatted_lines.append(lines[0])
-        formatted_lines.append("-" * len(lines[0]))
+        header = lines[0]
+        formatted_lines.append(header)
+        
+        # Create a separator line based on the header columns
+        import re
+        separator = []
+        for col in re.findall(r'\S+\s*', header):
+            separator.append('-' * len(col))
+        formatted_lines.append(''.join(separator))
+        
         formatted_lines.extend(lines[1:])
 
     return "\n".join(formatted_lines)
