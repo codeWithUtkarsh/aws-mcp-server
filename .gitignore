@@ -16,24 +16,25 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-# Testing
+# Testing and Coverage
 .coverage
 .coverage.*
-htmlcov/
+.pytest_cache/
 .tox/
 .nox/
-.pytest_cache/
+htmlcov/
+.hypothesis/
 coverage.xml
 *.cover
-.hypothesis/
 nosetests.xml
 
-# Virtual environments
+# Virtual Environments
 .env
 .venv/
 env/
@@ -42,25 +43,24 @@ ENV/
 env.bak/
 venv.bak/
 
-# Linting and caching
-.mypy_cache/
+# Development and IDE
+.idea/
+.vscode/
 .ruff_cache/
+.mypy_cache/
 .dmypy.json
 dmypy.json
 .pytype/
-
-# IDE
-.idea/
-.vscode/
+.spyderproject
+.spyproject
+.ropeproject
+.aider*
 *.swp
 *.swo
 *~
 .*.sw[op]
-.spyderproject
-.spyproject
-.ropeproject
 
-# Jupyter Notebook
+# Jupyter
 .ipynb_checkpoints
 
 # Logs
@@ -69,14 +69,14 @@ logs/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# OS
+# OS Generated
 .DS_Store
 Thumbs.db
 Icon?
 ehthumbs.db
+Desktop.ini
 
-# Secrets and credentials
-.env
+# Secrets and Credentials
 *.pem
 *.key
 secrets/
@@ -84,12 +84,15 @@ config.local.yaml
 credentials.json
 aws_credentials
 
-# Local development
+# Local Development
 .direnv/
 .envrc
 *.local.yml
 *.local.yaml
 local_settings.py
-.aider*
 
-# Docker - keeping .dockerignore in git since it's a config file
+# Distribution
+*.tar.gz
+*.tgz
+*.zip
+*.gz

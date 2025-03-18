@@ -1,4 +1,4 @@
-# Git
+# Version Control
 .git/
 .github/
 .gitignore
@@ -8,23 +8,21 @@
 .dockerignore
 deploy/
 docker-compose*.yml
+Dockerfile*
 
 # Documentation
-CHANGELOG.md
-spec.md
-progress.md
+*.md
+docs/
 
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.$py.class
 *.so
 .Python
-venv/
-ENV/
-env/
-.venv/
-.env
+*.egg-info/
+*.egg
+.installed.cfg
 build/
 develop-eggs/
 dist/
@@ -37,30 +35,32 @@ parts/
 sdist/
 var/
 wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# Testing
+# Virtual Environments
+.env
+.venv/
+env/
+ENV/
+venv/
+
+# Testing and Coverage
 .coverage
-htmlcov/
+.pytest_cache/
 .tox/
 .nox/
-.pytest_cache/
+htmlcov/
 tests/
 
-# IDE
+# Development and IDE
 .idea/
 .vscode/
-*.swp
-*.swo
-
-# Development tools
 .ruff_cache/
 .mypy_cache/
 .aider*
+*.swp
+*.swo
 
-# OS
+# OS Generated
 .DS_Store
 Thumbs.db
 
