@@ -27,7 +27,7 @@ MAX_OUTPUT_SIZE: int = int(os.environ.get("AWS_MCP_MAX_OUTPUT", "10000"))  # Max
 
 # AWS CLI settings
 AWS_PROFILE: str = os.environ.get("AWS_PROFILE", "default")
-AWS_REGION: str = os.environ.get("AWS_REGION", "")
+AWS_REGION: str = os.environ.get("AWS_REGION", "us-east-1")
 
 # Instructions displayed to client during initialization
 INSTRUCTIONS: str = "Use this server to retrieve AWS CLI documentation and execute AWS CLI commands."
