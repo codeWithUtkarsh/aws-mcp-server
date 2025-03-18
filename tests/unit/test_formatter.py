@@ -1,10 +1,7 @@
 """Tests for the formatter module."""
 
 import json
-import logging
 from unittest.mock import patch
-
-import pytest
 
 from aws_mcp_server.utils.formatter import format_aws_output, format_list_output, format_table_output, is_json
 

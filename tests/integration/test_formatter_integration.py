@@ -6,7 +6,6 @@ with actual AWS CLI output formats.
 
 import json
 import subprocess
-from unittest.mock import patch
 
 import pytest
 
