@@ -6,6 +6,8 @@ providing a standardized interface for AWS CLI command execution and documentati
 
 import logging
 import sys
+import json
+import traceback
 
 from mcp.server.fastmcp import FastMCP
 
@@ -19,6 +21,7 @@ from .utils.cli_executor import (
     get_command_help,
 )
 from .utils.formatter import format_aws_output
+from .config import SERVER_INFO, SERVER_CAPABILITIES, INSTRUCTIONS
 
 # Configure logging
 logging.basicConfig(
@@ -27,16 +30,59 @@ logging.basicConfig(
 logger = logging.getLogger("aws-mcp-server")
 
 
-# Create the FastMCP server
-mcp = FastMCP("AWS MCP Server")
+# Create the FastMCP server with additional configuration
+mcp = FastMCP(
+    name="AWS MCP Server",
+    version=SERVER_INFO["version"],
+    capabilities=SERVER_CAPABILITIES,
+    description=INSTRUCTIONS
+)
+
+# Add an explicit handler for the initialize method
+@mcp.method("initialize")
+async def handle_initialize(params):
+    """Handle the initialize request from the client.
+    
+    This is called when the client initiates a connection to the server.
+    """
+    try:
+        logger.info(f"Received initialize request from client")
+        protocol_version = params.get("protocolVersion", "unknown")
+        client_info = params.get("clientInfo", {})
+        client_name = client_info.get("name", "unknown")
+        client_version = client_info.get("version", "unknown")
+        
+        logger.info(f"Client connected: {client_name} v{client_version}, protocol: {protocol_version}")
+        
+        # Return a successful initialization response
+        return {
+            "serverInfo": {
+                "name": SERVER_INFO["name"],
+                "version": SERVER_INFO["version"]
+            },
+            "capabilities": SERVER_CAPABILITIES
+        }
+    except Exception as e:
+        logger.error(f"Error during initialization: {e}")
+        logger.error(traceback.format_exc())
+        # Return an empty response instead of raising to avoid client-side errors
+        return {
+            "serverInfo": {
+                "name": SERVER_INFO["name"],
+                "version": SERVER_INFO["version"]
+            },
+            "capabilities": SERVER_CAPABILITIES
+        }
 
 # Add a startup function that can be called when the server starts
 async def startup():
     """Run startup tasks for the server."""
     # Check if AWS CLI is installed
+    logger.info("Running startup checks...")
     if not await check_aws_cli_installed():
         logger.error("AWS CLI is not installed or not in PATH. Please install AWS CLI.")
         sys.exit(1)
+    logger.info("AWS CLI is installed and available")
 
 
 @mcp.tool()

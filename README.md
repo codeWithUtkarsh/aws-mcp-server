@@ -253,18 +253,15 @@ The AWS MCP Server can be easily integrated with Claude Desktop to enable AI-ass
            "-i",
            "--rm",
            "-v",
-           "$HOME/.aws:/root/.aws:ro",
+           "/Users/yourusername/.aws:/root/.aws:ro",
            "ghcr.io/alexei-led/aws-mcp-server:latest"
-         ],
-         "env": {
-           "HOME": "/Users/yourusername"
-         }
+         ]
        }
      }
    }
    ```
 
-   > **Note for macOS/Linux users**: Replace `/Users/yourusername` with your actual home directory path.
+   > **Note for macOS/Linux users**: Replace `/Users/yourusername` with your actual home directory path. Do not use environment variables like `$HOME` as they won't be expanded correctly.
    > **Note for Windows users**: Use the appropriate path format for your AWS credentials location, for example:
    > ```json
    > {
