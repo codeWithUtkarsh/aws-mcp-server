@@ -102,7 +102,7 @@ def format_list_output(text: str) -> str:
                     indent = len(line) - len(line.lstrip())
                     # Preserve the original indentation
                     indentation = " " * indent
-                    formatted_line = indentation + "• " + line.strip()
+                    formatted_line = indentation + "• " + line.lstrip()
                     formatted_lines.append(formatted_line)
                 else:
                     formatted_lines.append(line)  # Keep empty lines
