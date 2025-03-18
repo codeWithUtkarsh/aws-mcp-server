@@ -19,8 +19,7 @@ The AWS MCP Server provides a bridge between MCP-aware AI assistants (like Claud
 
 ## Requirements
 
-- Python 3.13 or later
-- AWS CLI installed on the host system
+- Docker (default) or Python 3.13+ (and AWS CLI installed locally)
 - AWS credentials configured
 
 ## Installation
