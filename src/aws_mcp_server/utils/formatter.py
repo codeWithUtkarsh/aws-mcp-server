@@ -94,20 +94,19 @@ def format_list_output(text: str) -> str:
         return text
 
     try:
-        # Check if lines match typical AWS list patterns
-        if all(re.match(r"^\s*\S+\s+\S+.*$", line) for line in lines if line.strip()):
-            # Add bullet points to list items
-            for line in lines:
-                if line.strip():
-                    indent = len(line) - len(line.lstrip())
-                    # Preserve the original indentation
-                    indentation = " " * indent
-                    formatted_line = indentation + "• " + line.lstrip()
-                    formatted_lines.append(formatted_line)
-                else:
-                    formatted_lines.append(line)  # Keep empty lines
+        # Process each line individually without the regex pattern check
+        for line in lines:
+            if line.strip():
+                # Get the indentation level
+                indent = len(line) - len(line.lstrip())
+                indentation = " " * indent
+                # Add bullet point after the indentation, but use the content without the indentation
+                formatted_line = indentation + "• " + line.lstrip()
+                formatted_lines.append(formatted_line)
+            else:
+                formatted_lines.append(line)  # Keep empty lines
 
-            return "\n".join(formatted_lines)
+        return "\n".join(formatted_lines)
     except Exception as e:
         logger.debug(f"Error formatting list output: {e}")
 
