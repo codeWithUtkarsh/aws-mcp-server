@@ -5,11 +5,12 @@ the AWS MCP Server, with options for different transport methods and logging lev
 """
 
 import argparse
+import asyncio
 import logging
 import sys
 
 from .config import SERVER_INFO
-from .server import mcp
+from .server import mcp, startup
 
 # Configure root logger
 logging.basicConfig(
@@ -33,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+async def main() -> None:
     """Main entry point for the AWS MCP Server.
 
     Parses command-line arguments, configures logging, and starts the server
@@ -49,6 +50,9 @@ def main() -> None:
     logger.info(f"Starting {SERVER_INFO['name']} version {SERVER_INFO['version']}")
 
     try:
+        # Run startup checks
+        await startup()
+        
         # Run the server based on transport type
         if args.tcp:
             logger.info(f"Using TCP transport on {args.host}:{args.port}")
@@ -64,4 +68,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
