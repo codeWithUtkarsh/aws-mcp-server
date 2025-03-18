@@ -158,7 +158,7 @@ def test_format_aws_output_plain():
     
     # Test with empty input
     assert format_aws_output("") == ""
-    assert format_aws_output(None) == None
+    assert format_aws_output(None) is None
 
 
 def test_format_aws_output_error_handling():
