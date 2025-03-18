@@ -61,7 +61,7 @@ def format_table_output(text: str) -> str:
         
         # Create a separator line based on the header columns
         separator = ""
-        for i, char in enumerate(header):
+        for _i, char in enumerate(header):
             separator += "-" if char != " " else " "
         formatted_lines.append(separator)
         
