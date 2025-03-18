@@ -210,6 +210,8 @@ The AWS MCP Server can be easily integrated with Claude Desktop to enable AI-ass
 
 ### Setting Up Claude Desktop with AWS MCP Server
 
+#### Method 1: Using the UI Settings
+
 1. **Install Claude Desktop**:
    - Download and install [Claude Desktop](https://claude.ai/download) for your platform
 
@@ -233,6 +235,40 @@ The AWS MCP Server can be easily integrated with Claude Desktop to enable AI-ass
      - **URL**: `http://localhost:8000` (or the appropriate host/port if different)
      - **Description**: AWS CLI commands and documentation
    - Click "Add Server"
+
+#### Method 2: Using the Configuration File
+
+1. **Locate the Claude Desktop configuration file**:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. **Edit the configuration file** to include AWS MCP Server as a Docker container:
+   ```json
+   {
+     "mcpServers": {
+       "aws": {
+         "command": "docker",
+         "args": [
+           "run",
+           "-i",
+           "--rm",
+           "-v",
+           "${HOME}/.aws:/root/.aws:ro",
+           "ghcr.io/alexei-led/aws-mcp-server:latest"
+         ]
+       }
+     }
+   }
+   ```
+
+   This configuration:
+   - Uses the official AWS MCP Server Docker image
+   - Mounts your local AWS credentials (read-only) into the container
+   - Runs the container on demand and removes it after use
+
+3. **Restart Claude Desktop** after updating the configuration
+   - After restarting, you should see a hammer 🔨 icon in the bottom right corner of the input box
+   - This indicates that the AWS MCP Server is available for use
 
 4. **Using AWS CLI with Claude**:
    - Start a new conversation in Claude Desktop
