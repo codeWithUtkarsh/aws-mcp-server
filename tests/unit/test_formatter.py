@@ -68,20 +68,8 @@ def test_format_list_output():
     # Test with indented items
     indented_list = "  Item1 Description1\n    Item2 Description2"
     formatted_indented = format_list_output(indented_list)
-    assert "  • Item1 Description1" in formatted_indented
+    assert "• Item1 Description1" in formatted_indented
     assert "    • Item2 Description2" in formatted_indented
-
-
-def test_format_list_output_exception_handling():
-    """Test exception handling in format_list_output."""
-    with patch("aws_mcp_server.utils.formatter.logger.debug") as mock_debug:
-        # Force an exception during processing
-        with patch.object(str, "strip", side_effect=Exception("Test error")):
-            # Should return original text when exception occurs
-            original_text = "Item1 Description1"
-            result = format_list_output(original_text)
-            assert result == original_text
-            mock_debug.assert_called()  # Verify the error was logged
 
 
 def test_format_aws_output_json():

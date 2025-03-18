@@ -10,8 +10,6 @@ deploy/
 docker-compose*.yml
 
 # Documentation
-README.md
-LICENSE
 CHANGELOG.md
 spec.md
 progress.md
