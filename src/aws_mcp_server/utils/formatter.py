@@ -60,10 +60,10 @@ def format_table_output(text: str) -> str:
         formatted_lines.append(header)
         
         # Create a separator line based on the header columns
-        import re
         separator = []
-        for col in re.findall(r'\S+\s*', header):
-            separator.append('-' * len(col))
+        # Use a simple split approach instead of regex
+        for col in header.split():
+            separator.append('-' * len(col) + '  ')
         formatted_lines.append(''.join(separator))
         
         formatted_lines.extend(lines[1:])
