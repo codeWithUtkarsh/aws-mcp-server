@@ -4,6 +4,7 @@ This module defines the MCP server instance and tool functions for AWS CLI inter
 providing a standardized interface for AWS CLI command execution and documentation.
 """
 
+import asyncio
 import logging
 import sys
 
