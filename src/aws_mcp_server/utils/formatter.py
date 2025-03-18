@@ -60,11 +60,10 @@ def format_table_output(text: str) -> str:
         formatted_lines.append(header)
         
         # Create a separator line based on the header columns
-        separator = []
-        # Use a simple split approach instead of regex
-        for col in header.split():
-            separator.append('-' * len(col) + '  ')
-        formatted_lines.append(''.join(separator))
+        separator = ""
+        for i, char in enumerate(header):
+            separator += "-" if char != " " else " "
+        formatted_lines.append(separator)
         
         formatted_lines.extend(lines[1:])
 
