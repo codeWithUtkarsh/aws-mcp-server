@@ -86,14 +86,14 @@ def format_list_output(text: str) -> str:
         return text
         
     lines = text.strip().split("\n")
-    formatted_lines = []
-
+    
     # Skip empty input
     if not lines:
         return text
 
     try:
-        # Process each line individually without the regex pattern check
+        formatted_lines = []
+        # Process each line individually
         for line in lines:
             if line.strip():
                 # Get the indentation level
@@ -108,9 +108,8 @@ def format_list_output(text: str) -> str:
         return "\n".join(formatted_lines)
     except Exception as e:
         logger.debug(f"Error formatting list output: {e}")
-
-    # Default fallback
-    return text
+        # Return the original text when an exception occurs
+        return text
 
 
 def format_aws_output(output: Optional[str], format_type: Optional[str] = None) -> Optional[str]:
