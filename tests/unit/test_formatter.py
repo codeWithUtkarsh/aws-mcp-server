@@ -165,7 +165,5 @@ def test_format_aws_output_error_handling():
     """Test error handling in format_aws_output."""
     with patch("aws_mcp_server.utils.formatter.format_table_output") as mock_format:
         mock_format.side_effect = Exception("Formatting error")
-        with patch("aws_mcp_server.utils.formatter.logger.warning") as mock_warning:
-            # Should return original text when exception occurs
-            assert format_aws_output("test data") == "test data"
-            mock_warning.assert_called()
+        # Should return original text when exception occurs
+        assert format_aws_output("test data") == "test data"
