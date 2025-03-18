@@ -6,7 +6,6 @@ including functions to handle JSON, table, and list formats.
 
 import json
 import logging
-import re
 from typing import Optional
 
 # Configure module logger
