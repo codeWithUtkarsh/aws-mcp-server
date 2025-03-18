@@ -124,7 +124,7 @@ def test_format_aws_output_with_format_hint():
 def test_format_aws_output_json_error_handling():
     """Test error handling when formatting JSON."""
     # Test with invalid JSON but JSON hint
-    with patch("logging.warning") as mock_warning:
+    with patch("aws_mcp_server.utils.formatter.logger.warning") as mock_warning:
         result = format_aws_output("invalid json", format_type="json")
         assert result == "invalid json"  # Should return original on error
         mock_warning.assert_called()
@@ -132,7 +132,7 @@ def test_format_aws_output_json_error_handling():
     # Test with unexpected error
     with patch("json.loads") as mock_loads:
         mock_loads.side_effect = Exception("Unexpected error")
-        with patch("logging.warning") as mock_warning:
+        with patch("aws_mcp_server.utils.formatter.logger.warning") as mock_warning:
             result = format_aws_output('{"key": "value"}', format_type="json")
             assert result == '{"key": "value"}'  # Should return original
             mock_warning.assert_called()
@@ -165,7 +165,7 @@ def test_format_aws_output_error_handling():
     """Test error handling in format_aws_output."""
     with patch("aws_mcp_server.utils.formatter.format_table_output") as mock_format:
         mock_format.side_effect = Exception("Formatting error")
-        with patch("logging.warning") as mock_warning:
+        with patch("aws_mcp_server.utils.formatter.logger.warning") as mock_warning:
             # Should return original text when exception occurs
             assert format_aws_output("test data") == "test data"
             mock_warning.assert_called()

@@ -100,6 +100,7 @@ def format_list_output(text: str) -> str:
             for line in lines:
                 if line.strip():
                     indent = len(line) - len(line.lstrip())
+                    # Preserve the original indentation
                     formatted_line = " " * indent + "• " + line.strip()
                     formatted_lines.append(formatted_line)
                 else:
@@ -160,9 +161,16 @@ def format_aws_output(output: Optional[str], format_type: Optional[str] = None) 
             except Exception as e:
                 logger.debug(f"Error parsing JSON-like output: {e}")
 
+        # Try to detect IAM list-users and similar outputs
+        if "USERS" in output or "USER" in output:
+            return format_list_output(output)
+
         # Try to detect and format table-like output
         if "\n" in output and len(output.strip().split("\n")) > 1:
             if all(len(line.split()) > 1 for line in output.strip().split("\n") if line.strip()):
+                # Check if it looks more like a list than a table
+                if any(line.strip().startswith("USERS") for line in output.strip().split("\n")):
+                    return format_list_output(output)
                 return format_table_output(output)
             else:
                 return format_list_output(output)
