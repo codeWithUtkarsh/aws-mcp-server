@@ -7,10 +7,10 @@ with proper error handling, timeouts, and output processing.
 import asyncio
 import logging
 import shlex
+import time
 from typing import TypedDict
 
-from ..config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE, MAX_CALLS_PER_SECOND
-import time
+from ..config import DEFAULT_TIMEOUT, MAX_CALLS_PER_SECOND, MAX_OUTPUT_SIZE
 
 # Configure module logger
 logger = logging.getLogger(__name__)
