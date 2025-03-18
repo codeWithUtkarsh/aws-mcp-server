@@ -43,11 +43,11 @@ class TestServerIntegration:
     integration marker since they can run without AWS CLI or credentials."""
 
     @pytest.mark.asyncio
-    @patch("aws_mcp_server.utils.cli_executor.execute_aws_command")
-    async def test_describe_command_integration(self, mock_execute, mock_aws_environment):
+    @patch("aws_mcp_server.server.get_command_help")
+    async def test_describe_command_integration(self, mock_get_help, mock_aws_environment):
         """Test the describe_command functionality end-to-end."""
-        # Mock the AWS CLI response
-        mock_execute.return_value = {"status": "success", "output": "AWS S3 HELP\nCommands:\ncp\nls\nmv\nrm\nsync"}
+        # Mock the get_command_help response
+        mock_get_help.return_value = {"help_text": "AWS S3 HELP\nCommands:\ncp\nls\nmv\nrm\nsync"}
 
         # Call the describe_command function
         result = await describe_command("s3")
@@ -58,12 +58,10 @@ class TestServerIntegration:
         assert "Commands" in result["help_text"]
 
         # Verify the mock was called correctly
-        mock_execute.assert_called_once()
-        call_args = mock_execute.call_args[0][0]
-        assert "aws s3 help" == call_args
+        mock_get_help.assert_called_once_with("s3", None)
 
     @pytest.mark.asyncio
-    @patch("aws_mcp_server.utils.cli_executor.execute_aws_command")
+    @patch("aws_mcp_server.server.execute_aws_command")
     async def test_execute_command_with_json_output(self, mock_execute, mock_aws_environment):
         """Test the execute_command with JSON output formatting."""
         # Mock the JSON response from AWS CLI
@@ -81,7 +79,7 @@ class TestServerIntegration:
         mock_execute.assert_called_once_with("aws s3 ls --output json")
 
     @pytest.mark.asyncio
-    @patch("aws_mcp_server.utils.cli_executor.execute_aws_command")
+    @patch("aws_mcp_server.server.execute_aws_command")
     async def test_execute_command_error_handling(self, mock_execute, mock_aws_environment):
         """Test error handling in execute_command."""
         # Mock an error response from AWS CLI
