@@ -99,8 +99,8 @@ def format_list_output(text: str) -> str:
                 # Get the indentation level
                 indent = len(line) - len(line.lstrip())
                 indentation = " " * indent
-                # Add bullet point after the indentation, but use the content without the indentation
-                formatted_line = indentation + "• " + line.lstrip()
+                # Add bullet point after the indentation, preserve the original content
+                formatted_line = indentation + "• " + line[indent:]
                 formatted_lines.append(formatted_line)
             else:
                 formatted_lines.append(line)  # Keep empty lines

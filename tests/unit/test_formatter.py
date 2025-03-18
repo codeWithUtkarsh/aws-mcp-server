@@ -76,7 +76,7 @@ def test_format_list_output_exception_handling():
     """Test exception handling in format_list_output."""
     with patch("aws_mcp_server.utils.formatter.logger.debug") as mock_debug:
         # Force an exception during processing
-        with patch("str.strip", side_effect=Exception("Test error")):
+        with patch.object(str, "strip", side_effect=Exception("Test error")):
             # Should return original text when exception occurs
             original_text = "Item1 Description1"
             result = format_list_output(original_text)
