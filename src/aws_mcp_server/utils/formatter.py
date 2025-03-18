@@ -7,12 +7,13 @@ including functions to handle JSON, table, and list formats.
 import json
 import logging
 import re
+from typing import Optional
 
 # Configure module logger
 logger = logging.getLogger(__name__)
 
 
-def is_json(text: str) -> bool:
+def is_json(text: Optional[str]) -> bool:
     """Check if a string is valid JSON.
 
     Args:
@@ -21,6 +22,9 @@ def is_json(text: str) -> bool:
     Returns:
         True if the string is valid JSON, False otherwise
     """
+    if not text:
+        return False
+        
     try:
         json.loads(text)
         return True
@@ -79,6 +83,10 @@ def format_list_output(text: str) -> str:
     Returns:
         Formatted text with improved readability for list data
     """
+    # Skip empty input
+    if not text or not text.strip():
+        return text
+        
     lines = text.strip().split("\n")
     formatted_lines = []
 
@@ -106,7 +114,7 @@ def format_list_output(text: str) -> str:
     return text
 
 
-def format_aws_output(output: str, format_type: str | None = None) -> str:
+def format_aws_output(output: Optional[str], format_type: Optional[str] = None) -> Optional[str]:
     """Format AWS CLI output for better readability.
 
     This function attempts to detect the format of AWS CLI output and format it
@@ -120,7 +128,7 @@ def format_aws_output(output: str, format_type: str | None = None) -> str:
         Formatted output with improved readability
     """
     # If empty output, return as is
-    if not output or not output.strip():
+    if output is None or not output.strip():
         return output
 
     try:
@@ -133,8 +141,10 @@ def format_aws_output(output: str, format_type: str | None = None) -> str:
                     return json.dumps(json_data, indent=2)
                 except ValueError:
                     logger.warning("Failed to parse output as JSON despite format hint")
+                    return output
                 except Exception as e:
                     logger.warning(f"Unexpected error formatting JSON: {e}")
+                    return output
             elif format_type.lower() == "table":
                 return format_table_output(output)
             elif format_type.lower() == "list":
