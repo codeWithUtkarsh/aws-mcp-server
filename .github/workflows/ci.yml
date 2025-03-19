@@ -37,12 +37,6 @@ jobs:
         run: |
           ruff check . --output-format=github
           ruff format --check .
-        
-      - name: Ruff badge action
-        uses: shaypal5/ruff-badge@v1.0.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          path: '.github/badges'
 
       - name: Run unit tests
         run: |
