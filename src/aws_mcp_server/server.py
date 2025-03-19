@@ -8,7 +8,7 @@ import logging
 import sys
 from mcp.server.fastmcp import FastMCP, Context
 
-from .cli_executor import (
+from aws_mcp_server.cli_executor import (
     CommandExecutionError,
     CommandHelpResult,
     CommandResult,
@@ -17,7 +17,7 @@ from .cli_executor import (
     execute_aws_command,
     get_command_help,
 )
-from .config import SERVER_INFO, INSTRUCTIONS
+from aws_mcp_server.config import SERVER_INFO, INSTRUCTIONS
 
 # Configure logging
 logging.basicConfig(

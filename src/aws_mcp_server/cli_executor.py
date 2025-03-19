@@ -9,7 +9,7 @@ import logging
 import shlex
 from typing import TypedDict
 
-from .config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
+from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
 
 # Configure module logger
 logger = logging.getLogger(__name__)
