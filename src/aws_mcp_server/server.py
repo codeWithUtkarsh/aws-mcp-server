@@ -9,6 +9,7 @@ import logging
 import sys
 
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import Field
 
 from aws_mcp_server.cli_executor import (
     CommandExecutionError,
@@ -50,16 +51,15 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-async def describe_command(service: str, command: str | None = None, ctx: Context | None = None) -> CommandHelpResult:
+async def describe_command(
+    service: str = Field(description="AWS service (e.g., s3, ec2)"),
+    command: str | None = Field(description="Command within the service", default=None),
+    ctx: Context | None = None,
+) -> CommandHelpResult:
     """Get AWS CLI command documentation.
 
     Retrieves the help documentation for a specified AWS service or command
     by executing the 'aws <service> [command] help' command.
-
-    Args:
-        service: AWS service (e.g., s3, ec2)
-        command: Command within the service (optional)
-        ctx: FastMCP context object (optional)
 
     Returns:
         CommandHelpResult containing the help text
@@ -79,26 +79,26 @@ async def describe_command(service: str, command: str | None = None, ctx: Contex
 
 
 @mcp.tool()
-async def execute_command(command: str, ctx: Context | None = None) -> CommandResult:
+async def execute_command(
+    command: str = Field(description="Complete AWS CLI command to execute"),
+    timeout: int | None = Field(description="Timeout in seconds (defaults to AWS_MCP_TIMEOUT)", default=None),
+    ctx: Context | None = None,
+) -> CommandResult:
     """Execute an AWS CLI command.
 
     Validates, executes, and processes the results of an AWS CLI command,
     handling errors and formatting the output for better readability.
 
-    Args:
-        command: Complete AWS CLI command to execute
-        ctx: FastMCP context object (optional)
-
     Returns:
         CommandResult containing output and status
     """
-    logger.info(f"Executing command: {command}")
+    logger.info(f"Executing command: {command}" + (f" with timeout: {timeout}" if timeout else ""))
 
     if ctx:
-        await ctx.info("Executing AWS CLI command")
+        await ctx.info("Executing AWS CLI command" + (f" with timeout: {timeout}s" if timeout else ""))
 
     try:
-        result = await execute_aws_command(command)
+        result = await execute_aws_command(command, timeout)
 
         # Format the output for better readability
         if result["status"] == "success":

@@ -47,12 +47,13 @@ class CommandExecutionError(Exception):
 
     pass
 
+
 def is_auth_error(error_output: str) -> bool:
     """Detect if an error is related to authentication.
-    
+
     Args:
         error_output: The error output from AWS CLI
-        
+
     Returns:
         True if the error is related to authentication, False otherwise
     """
@@ -62,23 +63,19 @@ def is_auth_error(error_output: str) -> bool:
         "AccessDenied",
         "AuthFailure",
         "The security token included in the request is invalid",
-        "The config profile could not be found"
+        "The config profile could not be found",
     ]
     return any(pattern in error_output for pattern in auth_error_patterns)
 
 
 async def check_aws_cli_installed() -> bool:
     """Check if AWS CLI is installed and accessible.
-    
+
     Returns:
         True if AWS CLI is installed, False otherwise
     """
     try:
-        process = await asyncio.create_subprocess_shell(
-            "aws --version",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+        process = await asyncio.create_subprocess_shell("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         await process.communicate()
         return process.returncode == 0
     except Exception:
@@ -87,27 +84,22 @@ async def check_aws_cli_installed() -> bool:
 
 def validate_aws_command(command: str) -> None:
     """Validate that the command is a proper AWS CLI command.
-    
+
     Args:
         command: The AWS CLI command to validate
-        
+
     Raises:
         CommandValidationError: If the command is invalid
     """
     cmd_parts = shlex.split(command)
     if not cmd_parts or cmd_parts[0].lower() != "aws":
         raise CommandValidationError("Commands must start with 'aws'")
-    
+
     if len(cmd_parts) < 2:
         raise CommandValidationError("Command must include an AWS service (e.g., aws s3)")
-    
+
     # Optional: Add a deny list for potentially dangerous commands
-    dangerous_commands = [
-        "aws iam create-user", 
-        "aws iam create-access-key",
-        "aws ec2 terminate-instances",
-        "aws rds delete-db-instance"
-    ]
+    dangerous_commands = ["aws iam create-user", "aws iam create-access-key", "aws ec2 terminate-instances", "aws rds delete-db-instance"]
     if any(command.startswith(dangerous_cmd) for dangerous_cmd in dangerous_commands):
         raise CommandValidationError("This command is restricted for security reasons")
 
@@ -167,13 +159,10 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         if process.returncode != 0:
             logger.warning(f"Command failed with return code {process.returncode}: {command}")
             logger.debug(f"Command error output: {stderr_str}")
-            
+
             if is_auth_error(stderr_str):
-                return CommandResult(
-                    status="error", 
-                    output=f"Authentication error: {stderr_str}\nPlease check your AWS credentials."
-                )
-            
+                return CommandResult(status="error", output=f"Authentication error: {stderr_str}\nPlease check your AWS credentials.")
+
             return CommandResult(status="error", output=stderr_str or "Command failed with no error output")
 
         return CommandResult(status="success", output=stdout_str)

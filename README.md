@@ -1,5 +1,13 @@
 # AWS Model Context Protocol (MCP) Server
 
+[![CI](https://github.com/alexei-led/aws-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/alexei-led/aws-mcp-server/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/alexei-led/aws-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/alexei-led/aws-mcp-server)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/alexei-led/aws-mcp-server/main/.github/badges/ruff.json)](https://github.com/astral-sh/ruff)
+[![Python Version](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/aws-mcp-server.svg)](https://badge.fury.io/py/aws-mcp-server)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/alexei-led/aws-mcp-server)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A lightweight service that enables AI assistants to execute AWS CLI commands through the Model Context Protocol (MCP).
 
 ## Overview

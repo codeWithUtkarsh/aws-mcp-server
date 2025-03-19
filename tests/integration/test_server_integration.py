@@ -50,7 +50,7 @@ class TestServerIntegration:
         mock_get_help.return_value = {"help_text": "AWS S3 HELP\nCommands:\ncp\nls\nmv\nrm\nsync"}
 
         # Call the describe_command function
-        result = await describe_command("s3")
+        result = await describe_command(service="s3", command=None, ctx=None)
 
         # Verify the results
         assert "help_text" in result
@@ -69,14 +69,14 @@ class TestServerIntegration:
         mock_execute.return_value = {"status": "success", "output": json_response}
 
         # Call the execute_command function
-        result = await execute_command("aws s3 ls --output json")
+        result = await execute_command(command="aws s3 ls --output json", timeout=None, ctx=None)
 
         # Verify the results - check the actual structure of the result
         assert "Buckets" in result["output"]
         assert "test-bucket" in result["output"]
 
         # Verify the mock was called correctly
-        mock_execute.assert_called_once_with("aws s3 ls --output json")
+        mock_execute.assert_called_once_with("aws s3 ls --output json", None)
 
     @pytest.mark.asyncio
     @patch("aws_mcp_server.server.execute_aws_command")
@@ -87,11 +87,11 @@ class TestServerIntegration:
         mock_execute.return_value = {"status": "error", "output": error_message}
 
         # Call the execute_command function
-        result = await execute_command("aws s3 ls --invalid-flag")
+        result = await execute_command(command="aws s3 ls --invalid-flag", timeout=None, ctx=None)
 
         # Verify the results
         assert result["status"] == "error"
         assert "--invalid-flag" in result["output"]
 
         # Verify the mock was called correctly
-        mock_execute.assert_called_once_with("aws s3 ls --invalid-flag")
+        mock_execute.assert_called_once_with("aws s3 ls --invalid-flag", None)

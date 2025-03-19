@@ -31,7 +31,7 @@ class TestAWSLiveIntegration:
     @pytest.mark.asyncio
     async def test_describe_s3_command(self, ensure_aws_credentials):
         """Test getting help for AWS S3 commands."""
-        result = await describe_command("s3")
+        result = await describe_command(service="s3", command=None, ctx=None)
 
         # Verify we got a valid response
         assert isinstance(result, dict)
@@ -47,7 +47,7 @@ class TestAWSLiveIntegration:
     @pytest.mark.asyncio
     async def test_list_s3_buckets(self, ensure_aws_credentials):
         """Test listing S3 buckets."""
-        result = await execute_command("aws s3 ls")
+        result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
 
         # Verify the result format
         assert isinstance(result, dict)
@@ -82,16 +82,16 @@ class TestAWSLiveIntegration:
                 f.write(test_file_content)
 
             # Upload the file to S3
-            upload_result = await execute_command(f"aws s3 cp {test_file_name} s3://{aws_s3_bucket}/{test_file_name}")
+            upload_result = await execute_command(command=f"aws s3 cp {test_file_name} s3://{aws_s3_bucket}/{test_file_name}", timeout=None, ctx=None)
             assert upload_result["status"] == "success"
 
             # List the bucket contents
-            list_result = await execute_command(f"aws s3 ls s3://{aws_s3_bucket}/")
+            list_result = await execute_command(command=f"aws s3 ls s3://{aws_s3_bucket}/", timeout=None, ctx=None)
             assert list_result["status"] == "success"
             assert test_file_name in list_result["output"]
 
             # Download the file with a different name
-            download_result = await execute_command(f"aws s3 cp s3://{aws_s3_bucket}/{test_file_name} {downloaded_file_name}")
+            download_result = await execute_command(command=f"aws s3 cp s3://{aws_s3_bucket}/{test_file_name} {downloaded_file_name}", timeout=None, ctx=None)
             assert download_result["status"] == "success"
 
             # Verify the downloaded file content
@@ -101,7 +101,7 @@ class TestAWSLiveIntegration:
 
         finally:
             # Clean up: Remove files from S3 and local
-            await execute_command(f"aws s3 rm s3://{aws_s3_bucket}/{test_file_name}")
+            await execute_command(command=f"aws s3 rm s3://{aws_s3_bucket}/{test_file_name}", timeout=None, ctx=None)
 
             # Clean up local files
             for file_name in [test_file_name, downloaded_file_name]:
@@ -112,7 +112,7 @@ class TestAWSLiveIntegration:
     async def test_aws_json_output_formatting(self, ensure_aws_credentials):
         """Test JSON output formatting from AWS commands."""
         # Use EC2 describe-regions as it's available in all accounts
-        result = await execute_command("aws ec2 describe-regions --output json")
+        result = await execute_command(command="aws ec2 describe-regions --output json", timeout=None, ctx=None)
 
         assert result["status"] == "success"
 

@@ -13,14 +13,11 @@ import os
 from pathlib import Path
 
 # Server information
-SERVER_INFO = {
-    "name": "AWS MCP Server", 
-    "version": "1.0.0"
-}
+SERVER_INFO = {"name": "AWS MCP Server", "version": "1.0.0"}
 
 # Command execution settings
-DEFAULT_TIMEOUT = int(os.environ.get("AWS_MCP_TIMEOUT", "30"))
-MAX_OUTPUT_SIZE = int(os.environ.get("AWS_MCP_MAX_OUTPUT", "10000"))
+DEFAULT_TIMEOUT = int(os.environ.get("AWS_MCP_TIMEOUT", "300"))
+MAX_OUTPUT_SIZE = int(os.environ.get("AWS_MCP_MAX_OUTPUT", "100000"))
 
 # AWS CLI settings
 AWS_PROFILE = os.environ.get("AWS_PROFILE", "default")
