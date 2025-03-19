@@ -3,10 +3,12 @@
 This module defines the MCP server instance and tool functions for AWS CLI interaction,
 providing a standardized interface for AWS CLI command execution and documentation.
 """
+
 import asyncio
 import logging
 import sys
-from mcp.server.fastmcp import FastMCP, Context
+
+from mcp.server.fastmcp import Context, FastMCP
 
 from aws_mcp_server.cli_executor import (
     CommandExecutionError,
@@ -17,15 +19,14 @@ from aws_mcp_server.cli_executor import (
     execute_aws_command,
     get_command_help,
 )
-from aws_mcp_server.config import SERVER_INFO, INSTRUCTIONS
+from aws_mcp_server.config import INSTRUCTIONS, SERVER_INFO
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, 
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
-    handlers=[logging.StreamHandler(sys.stderr)]
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)]
 )
 logger = logging.getLogger("aws-mcp-server")
+
 
 # Run startup checks in synchronous context
 def run_startup_checks():
@@ -36,6 +37,7 @@ def run_startup_checks():
         sys.exit(1)
     logger.info("AWS CLI is installed and available")
 
+
 # Call the checks
 run_startup_checks()
 
@@ -45,6 +47,7 @@ mcp = FastMCP(
     instructions=INSTRUCTIONS,
     version=SERVER_INFO["version"],
 )
+
 
 @mcp.tool()
 async def describe_command(service: str, command: str | None = None, ctx: Context | None = None) -> CommandHelpResult:
@@ -62,11 +65,11 @@ async def describe_command(service: str, command: str | None = None, ctx: Contex
         CommandHelpResult containing the help text
     """
     logger.info(f"Getting documentation for service: {service}, command: {command or 'None'}")
-    
+
     try:
         if ctx:
             await ctx.info(f"Fetching help for AWS {service} {command or ''}")
-            
+
         # Reuse the get_command_help function from cli_executor
         result = await get_command_help(service, command)
         return result
@@ -90,10 +93,10 @@ async def execute_command(command: str, ctx: Context | None = None) -> CommandRe
         CommandResult containing output and status
     """
     logger.info(f"Executing command: {command}")
-    
+
     if ctx:
-        await ctx.info(f"Executing AWS CLI command")
-        
+        await ctx.info("Executing AWS CLI command")
+
     try:
         result = await execute_aws_command(command)
 
