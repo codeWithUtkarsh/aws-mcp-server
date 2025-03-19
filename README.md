@@ -205,9 +205,8 @@ Executes AWS CLI commands:
 
 The project includes GitHub Actions workflows:
 
-- **CI**: Runs on every PR and push to main branch
-- **Development**: Runs on pushes to non-main branches and manual dispatch
-- **Release**: Publishes multi-architecture Docker image (AMD64 and ARM64) and PyPI package when a new release is created
+- **PR Validation**: Runs on every PR to main branch to verify code quality
+- **Release**: Publishes multi-architecture Docker image (AMD64 and ARM64) when a new release is created or a version tag is pushed
 
 ## Claude Desktop Integration
 
