@@ -23,9 +23,7 @@ from aws_mcp_server.cli_executor import (
 from aws_mcp_server.config import INSTRUCTIONS, SERVER_INFO
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)]
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)])
 logger = logging.getLogger("aws-mcp-server")
 
 

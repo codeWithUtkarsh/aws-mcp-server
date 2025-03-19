@@ -40,13 +40,13 @@ async def test_execute_aws_command_with_custom_timeout():
         process_mock.returncode = 0
         process_mock.communicate.return_value = (b"Success output", b"")
         mock_subprocess.return_value = process_mock
-        
+
         # Use a custom timeout
         custom_timeout = 120
         with patch("asyncio.wait_for") as mock_wait_for:
             mock_wait_for.return_value = (b"Success output", b"")
             await execute_aws_command("aws s3 ls", timeout=custom_timeout)
-            
+
             # Check that wait_for was called with the custom timeout
             mock_wait_for.assert_called_once()
             args, kwargs = mock_wait_for.call_args
@@ -103,10 +103,10 @@ async def test_execute_aws_command_timeout():
 
         with pytest.raises(CommandExecutionError) as excinfo:
             await execute_aws_command("aws s3 ls", timeout=1)
-            
+
         # Check error message
         assert "Command timed out after 1 seconds" in str(excinfo.value)
-        
+
         # Verify process was killed
         process_mock.kill.assert_called_once()
 
@@ -127,7 +127,7 @@ async def test_execute_aws_command_kill_failure():
 
         with pytest.raises(CommandExecutionError) as excinfo:
             await execute_aws_command("aws s3 ls", timeout=1)
-            
+
         # The main exception should still be about the timeout
         assert "Command timed out after 1 seconds" in str(excinfo.value)
 
@@ -138,7 +138,7 @@ async def test_execute_aws_command_general_exception():
     with patch("asyncio.create_subprocess_shell", side_effect=Exception("Test exception")):
         with pytest.raises(CommandExecutionError) as excinfo:
             await execute_aws_command("aws s3 ls")
-            
+
         assert "Failed to execute command" in str(excinfo.value)
         assert "Test exception" in str(excinfo.value)
 
@@ -150,9 +150,10 @@ async def test_execute_aws_command_truncate_output():
         # Mock a successful process with large output
         process_mock = AsyncMock()
         process_mock.returncode = 0
-        
+
         # Generate a large output that exceeds MAX_OUTPUT_SIZE
         from aws_mcp_server.config import MAX_OUTPUT_SIZE
+
         large_output = "x" * (MAX_OUTPUT_SIZE + 1000)
         process_mock.communicate.return_value = (large_output.encode("utf-8"), b"")
         mock_subprocess.return_value = process_mock
@@ -173,12 +174,12 @@ def test_is_auth_error():
         "Error: AccessDenied when attempting to perform operation",
         "AuthFailure: credentials could not be verified",
         "The security token included in the request is invalid",
-        "The config profile could not be found"
+        "The config profile could not be found",
     ]
-    
+
     for error_msg in auth_error_cases:
         assert is_auth_error(error_msg), f"Failed to identify auth error: {error_msg}"
-    
+
     # Test negative case
     non_auth_error = "S3 bucket not found"
     assert not is_auth_error(non_auth_error), f"Incorrectly identified as auth error: {non_auth_error}"
@@ -193,21 +194,21 @@ async def test_check_aws_cli_installed():
         process_mock.returncode = 0
         process_mock.communicate.return_value = (b"aws-cli/2.15.0", b"")
         mock_subprocess.return_value = process_mock
-        
+
         result = await check_aws_cli_installed()
         assert result is True
         mock_subprocess.assert_called_once_with("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    
+
     # Test when AWS CLI is not installed
     with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
         process_mock = AsyncMock()
         process_mock.returncode = 127  # Command not found
         process_mock.communicate.return_value = (b"", b"command not found")
         mock_subprocess.return_value = process_mock
-        
+
         result = await check_aws_cli_installed()
         assert result is False
-    
+
     # Test when subprocess raises an exception
     with patch("asyncio.create_subprocess_shell", side_effect=Exception("Test exception")):
         result = await check_aws_cli_installed()
@@ -225,31 +226,28 @@ async def test_get_command_help():
 
         assert result["help_text"] == "Help text"
         mock_execute.assert_called_once_with("aws s3 ls help")
-        
+
     # Test with validation error
-    with patch("aws_mcp_server.cli_executor.execute_aws_command", 
-              side_effect=CommandValidationError("Test validation error")) as mock_execute:
+    with patch("aws_mcp_server.cli_executor.execute_aws_command", side_effect=CommandValidationError("Test validation error")) as mock_execute:
         result = await get_command_help("s3", "ls")
-        
+
         assert "Command validation error" in result["help_text"]
         assert "Test validation error" in result["help_text"]
-    
+
     # Test with execution error
-    with patch("aws_mcp_server.cli_executor.execute_aws_command", 
-              side_effect=CommandExecutionError("Test execution error")) as mock_execute:
+    with patch("aws_mcp_server.cli_executor.execute_aws_command", side_effect=CommandExecutionError("Test execution error")) as mock_execute:
         result = await get_command_help("s3", "ls")
-        
+
         assert "Error retrieving help" in result["help_text"]
         assert "Test execution error" in result["help_text"]
-    
+
     # Test with generic exception
-    with patch("aws_mcp_server.cli_executor.execute_aws_command",
-              side_effect=Exception("Test exception")) as mock_execute:
+    with patch("aws_mcp_server.cli_executor.execute_aws_command", side_effect=Exception("Test exception")) as mock_execute:
         result = await get_command_help("s3", "ls")
-        
+
         assert "Error retrieving help" in result["help_text"]
         assert "Test exception" in result["help_text"]
-    
+
     # Test without command parameter
     with patch("aws_mcp_server.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
         mock_execute.return_value = {"status": "success", "output": "Help text for service"}

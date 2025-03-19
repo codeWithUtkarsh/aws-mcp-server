@@ -11,9 +11,7 @@ import sys
 from aws_mcp_server.server import logger, mcp
 
 # Configure root logger
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)]
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)])
 
 
 def handle_interrupt(sig, frame):
