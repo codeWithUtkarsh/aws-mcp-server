@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
 authors = [{ name = "Alexei Ledenev" }]
-dependencies = ["mcp>=1.0.0"]
+dependencies = [
+    "fastmcp>=0.4.1",
+    "mcp>=1.0.0"
+]
 
 [project.optional-dependencies]
 test = [

@@ -32,7 +32,7 @@ git clone https://github.com/alexei-led/aws-mcp-server.git
 cd aws-mcp-server
 
 # Build and run Docker container
-cd deploy/docker && docker-compose up -d
+docker compose -f deploy/docker/docker-compose.yml up -d
 ```
 
 The Docker image supports both AMD64/x86_64 (Intel/AMD) and ARM64 (Apple Silicon M1-M4, AWS Graviton) architectures.
@@ -218,7 +218,7 @@ The AWS MCP Server can be easily integrated with Claude Desktop to enable AI-ass
 2. **Start the AWS MCP Server**:
    - Start the server using Docker:
      ```bash
-     docker-compose up -d
+     docker compose -f deploy/docker/docker-compose.yml up -d
      ```
    - Or run it directly:
      ```bash

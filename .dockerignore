@@ -11,8 +11,11 @@ docker-compose*.yml
 Dockerfile*
 
 # Documentation
-*.md
 docs/
+
+# Markdown files except README.md
+*.md
+!README.md
 
 # Python
 __pycache__/

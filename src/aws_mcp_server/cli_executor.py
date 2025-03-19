@@ -7,10 +7,9 @@ with proper error handling, timeouts, and output processing.
 import asyncio
 import logging
 import shlex
-import time
 from typing import TypedDict
 
-from ..config import DEFAULT_TIMEOUT, MAX_CALLS_PER_SECOND, MAX_OUTPUT_SIZE
+from .config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -47,37 +46,6 @@ class CommandExecutionError(Exception):
     """
 
     pass
-
-
-class RateLimiter:
-    """Simple rate limiter for AWS commands."""
-    
-    def __init__(self, max_calls_per_second=5):
-        """Initialize the rate limiter.
-        
-        Args:
-            max_calls_per_second: Maximum number of calls allowed per second
-        """
-        self.max_calls = max_calls_per_second
-        self.calls = []
-    
-    async def wait_if_needed(self):
-        """Wait if rate limit is exceeded."""
-        now = time.time()
-        # Remove old calls
-        self.calls = [t for t in self.calls if now - t < 1.0]
-        
-        if len(self.calls) >= self.max_calls:
-            wait_time = 1.0 - (now - self.calls[0])
-            if wait_time > 0:
-                await asyncio.sleep(wait_time)
-        
-        self.calls.append(time.time())
-
-
-# Create a global rate limiter
-rate_limiter = RateLimiter(MAX_CALLS_PER_SECOND)
-
 
 def is_auth_error(error_output: str) -> bool:
     """Detect if an error is related to authentication.
@@ -161,9 +129,6 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         CommandValidationError: If the command is invalid
         CommandExecutionError: If the command fails to execute
     """
-    # Apply rate limiting
-    await rate_limiter.wait_if_needed()
-    
     # Validate the command
     validate_aws_command(command)
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from aws_mcp_server.server import describe_command, execute_command
-from aws_mcp_server.utils.cli_executor import CommandExecutionError, CommandValidationError
+from aws_mcp_server.cli_executor import CommandExecutionError, CommandValidationError
 
 
 @pytest.mark.asyncio
@@ -32,16 +32,10 @@ async def test_execute_command_success():
     # Mock the execute_aws_command function
     with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
         mock_execute.return_value = {"status": "success", "output": "Test output"}
-
-        # Also mock the format_aws_output function
-        with patch("aws_mcp_server.server.format_aws_output", return_value="Formatted output") as mock_format:
-            # Call the tool
-            result = await execute_command(command="aws s3 ls")
-
-            assert result["status"] == "success"
-            assert result["output"] == "Formatted output"
-            mock_execute.assert_called_with("aws s3 ls")
-            mock_format.assert_called_with("Test output")
+        result = await execute_command(command="aws s3 ls")
+        assert result["status"] == "success"
+        assert result["output"] == "Test output"
+        mock_execute.assert_called_with("aws s3 ls")
 
 
 @pytest.mark.asyncio

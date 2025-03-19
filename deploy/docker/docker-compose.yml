@@ -1,10 +1,9 @@
-version: "3.8"
-
 services:
   aws-mcp-server:
     # Use either local build or official image from GitHub Packages
     build:
-      context: .
+      context: ../../
+      dockerfile: ./deploy/docker/Dockerfile
     # Alternatively, use the pre-built multi-arch image
     # image: ghcr.io/alexei-led/aws-mcp-server:latest
     ports:

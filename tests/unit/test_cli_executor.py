@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from aws_mcp_server.utils.cli_executor import CommandExecutionError, CommandValidationError, execute_aws_command, get_command_help
+from aws_mcp_server.cli_executor import CommandExecutionError, CommandValidationError, execute_aws_command, get_command_help
 
 
 @pytest.mark.asyncio
@@ -71,7 +71,7 @@ async def test_execute_aws_command_timeout():
 @pytest.mark.asyncio
 async def test_get_command_help():
     """Test getting command help."""
-    with patch("aws_mcp_server.utils.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
+    with patch("aws_mcp_server.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
         mock_execute.return_value = {"status": "success", "output": "Help text"}
 
         result = await get_command_help("s3", "ls")

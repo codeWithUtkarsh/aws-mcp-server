@@ -32,6 +32,9 @@ COPY src/ ./src/
 # Install the package with all dependencies
 RUN pip install --no-cache-dir -e .
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
 # Create non-root user
 RUN useradd -m -s /bin/bash appuser
 USER appuser
