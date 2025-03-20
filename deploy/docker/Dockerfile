@@ -48,6 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sed \
     gawk \
     findutils \
+    build-essential \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -81,10 +82,9 @@ WORKDIR /app
 # Copy application code
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
-# Install the package
-RUN pip install -e .
+# Install the package directly (don't copy from builder)
+RUN pip install -e . --no-cache-dir
 
 # Set ownership after all files have been copied
 RUN chown -R appuser:appuser /app /home/appuser/.aws
