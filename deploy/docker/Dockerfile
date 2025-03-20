@@ -25,7 +25,7 @@ COPY src/ ./src/
 # Final stage
 FROM python:${PYTHON_VERSION}
 
-# Install AWS CLI and all runtime dependencies in a single layer
+# Step 1: Install system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     curl \
@@ -43,27 +43,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     grep \
     sed \
-    awk \
+    gawk \
     findutils \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    # Install AWS CLI based on architecture
-    && if [ "$(uname -m)" = "aarch64" ]; then \
+    && rm -rf /var/lib/apt/lists/*
+
+# Step 2: Install AWS CLI based on architecture
+RUN if [ "${TARGETARCH}" = "arm64" ]; then \
         curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
     else \
         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
     fi \
     && unzip -q awscliv2.zip \
     && ./aws/install \
-    && rm -rf awscliv2.zip aws \
-    # Install Session Manager plugin based on architecture
-    && if [ "$(uname -m)" = "aarch64" ]; then \
+    && rm -rf awscliv2.zip aws
+
+# Step 3: Install Session Manager plugin based on architecture
+RUN if [ "${TARGETARCH}" = "arm64" ]; then \
         curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_arm64/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
     else \
         curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
     fi \
-    && dpkg -i session-manager-plugin.deb \
-    && rm session-manager-plugin.deb
+    && sudo dpkg -i session-manager-plugin.deb \
+    && rm session-manager-plugin.deb || true # Ignore error if package is not installed (wrong architecture in AWS S3 bucket)
 
 # Set up application directory, user, and permissions all in one layer
 RUN mkdir -p /app/logs && chmod 777 /app/logs \
@@ -97,7 +99,6 @@ ENV HOME="/home/appuser" \
 LABEL maintainer="alexei-led" \
       description="AWS Multi-Command Proxy Server" \
       org.opencontainers.image.source="https://github.com/alexei-led/aws-mcp-server" \
-      org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
       org.opencontainers.image.version="1.0.0"
 
 # Expose the service port

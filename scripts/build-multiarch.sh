@@ -36,6 +36,7 @@ docker buildx build \
     --platform linux/amd64,linux/arm64 \
     --tag "$REPO:$TAG" \
     --file deploy/docker/Dockerfile \
+    --build-arg TARGETARCH \
     .
 
 echo ""
