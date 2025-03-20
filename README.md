@@ -299,6 +299,29 @@ Integration tests verify AWS MCP Server works correctly with actual AWS resource
 - **Permission Errors**: Check that your AWS credentials have the necessary permissions
 - **Timeout Errors**: For long-running commands, increase the `AWS_MCP_TIMEOUT` environment variable
 
+## Why Deploy with Docker
+
+### Security Benefits
+
+- **Isolation**: The Docker container provides complete isolation - AWS CLI commands and utilities run in a contained environment, not directly on your local machine
+- **Controlled Access**: The container only has read-only access to your AWS credentials
+- **No Local Installation**: Avoid installing AWS CLI and supporting tools directly on your host system
+- **Clean Environment**: Each container run starts with a pristine, properly configured environment
+
+### Reliability Advantages
+
+- **Consistent Configuration**: All required tools (AWS CLI, SSM plugin, jq) are pre-installed and properly configured
+- **Dependency Management**: Avoid version conflicts between tools and dependencies
+- **Cross-Platform Consistency**: Works the same way across different operating systems
+- **Complete Environment**: Includes all necessary tools for command pipes, filtering, and formatting
+
+### Other Benefits
+
+- **Multi-Architecture Support**: Runs on both Intel/AMD (x86_64) and ARM (Apple Silicon, AWS Graviton) processors
+- **Simple Updates**: Update to new versions with a single pull command
+- **No Python Environment Conflicts**: Avoids potential conflicts with other Python applications on your system
+- **Version Pinning**: Easily pin to specific versions for stability in production environments
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
