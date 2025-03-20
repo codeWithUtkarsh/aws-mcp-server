@@ -21,6 +21,7 @@ from aws_mcp_server.cli_executor import (
     get_command_help,
 )
 from aws_mcp_server.config import INSTRUCTIONS, SERVER_INFO
+from aws_mcp_server.prompts import register_prompts
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)])
@@ -46,6 +47,9 @@ mcp = FastMCP(
     instructions=INSTRUCTIONS,
     version=SERVER_INFO["version"],
 )
+
+# Register prompt templates
+register_prompts(mcp)
 
 
 @mcp.tool()

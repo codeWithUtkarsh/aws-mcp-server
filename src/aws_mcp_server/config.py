@@ -28,6 +28,17 @@ INSTRUCTIONS = """
 AWS MCP Server provides a simple interface to the AWS CLI.
 - Use the describe_command tool to get AWS CLI documentation
 - Use the execute_command tool to run AWS CLI commands
+- Use the built-in prompt templates for common AWS tasks following best practices:
+  - create_resource: Create AWS resources with proper security settings
+  - security_audit: Perform comprehensive service security audits
+  - cost_optimization: Find cost optimization opportunities
+  - resource_inventory: Create resource inventories
+  - troubleshoot_service: Troubleshoot service issues 
+  - iam_policy_generator: Generate least-privilege IAM policies
+  - service_monitoring: Set up monitoring and alerting
+  - disaster_recovery: Implement DR solutions
+  - compliance_check: Check compliance with standards
+  - resource_cleanup: Safely clean up unused resources
 """
 
 # Application paths

@@ -26,6 +26,7 @@ flowchart LR
 
 - **Command Documentation** - Detailed help information for AWS CLI commands
 - **Command Execution** - Execute AWS CLI commands and return human-readable results
+- **Prompt Templates** - Pre-defined prompt templates for common AWS tasks following best practices
 - **Docker Integration** - Simple deployment through containerization with multi-architecture support (AMD64/x86_64 and ARM64)
 - **AWS Authentication** - Leverages existing AWS credentials on the host machine
 
@@ -171,6 +172,47 @@ Claude: I'll list your S3 buckets for you.
 2023-11-20 09:15:32 my-bucket-2
 2024-01-05 11:22:18 my-backup-bucket
 ```
+
+**Using Prompt Templates**:
+```
+User: I need to perform a security audit of my S3 buckets
+
+Claude: I'll help you audit the security of your S3 buckets.
+
+Here are AWS CLI commands to perform a comprehensive security audit:
+
+# List all buckets with public access settings
+aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws s3api get-public-access-block --bucket {}
+
+# Check bucket policies for public access
+aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws s3api get-bucket-policy --bucket {} 2>/dev/null
+
+# Identify buckets without encryption
+aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws s3api get-bucket-encryption --bucket {} 2>/dev/null
+
+# Check for buckets without logging enabled
+aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws s3api get-bucket-logging --bucket {} 2>/dev/null
+
+# Verify bucket versioning status
+aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws s3api get-bucket-versioning --bucket {}
+```
+
+## Available Prompt Templates
+
+The AWS MCP Server includes the following pre-defined prompt templates:
+
+| Prompt | Description | Parameters |
+|--------|-------------|------------|
+| `create_resource` | Generate commands to create AWS resources with best practices | `resource_type`, `resource_name` |
+| `security_audit` | Audit security settings for a specific AWS service | `service` |
+| `cost_optimization` | Find cost optimization opportunities for a service | `service` |
+| `resource_inventory` | Create comprehensive inventory of resources | `service`, `region` (optional) |
+| `troubleshoot_service` | Generate commands to troubleshoot service issues | `service`, `resource_id` |
+| `iam_policy_generator` | Create least-privilege IAM policies | `service`, `actions`, `resource_pattern` (optional) |
+| `service_monitoring` | Set up comprehensive monitoring | `service`, `metric_type` (optional) |
+| `disaster_recovery` | Implement disaster recovery solutions | `service`, `recovery_point_objective` (optional) |
+| `compliance_check` | Check compliance with standards | `compliance_standard`, `service` (optional) |
+| `resource_cleanup` | Identify and safely clean up resources | `service`, `criteria` (optional) |
 
 ## Security
 
