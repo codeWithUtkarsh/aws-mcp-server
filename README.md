@@ -22,6 +22,12 @@ flowchart LR
     AWS <-->|API| Cloud[AWS Cloud]
 ```
 
+## Demo
+
+https://github.com/alexei-led/aws-mcp-server/blob/main/media/demo.mp4
+
+The video demonstrates using Claude Desktop with AWS MCP Server to create a new AWS EC2 instance with AWS SSM agent installed.
+
 ## Features
 
 - **Command Documentation** - Detailed help information for AWS CLI commands
