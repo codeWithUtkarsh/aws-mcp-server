@@ -3,7 +3,7 @@ ARG PYTHON_VERSION=3.13-slim
 ARG TARGETARCH
 
 # Build stage for Python dependencies
-FROM python:${PYTHON_VERSION} AS builder
+FROM --platform=${BUILDPLATFORM} python:${PYTHON_VERSION} AS builder
 
 # Set working directory
 WORKDIR /build
@@ -23,7 +23,10 @@ RUN pip install --no-cache-dir .
 COPY src/ ./src/
 
 # Final stage
-FROM python:${PYTHON_VERSION}
+FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
+
+# Make sure to propagate the build arg to this stage
+ARG TARGETARCH
 
 # Step 1: Install system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -91,7 +94,7 @@ USER appuser
 
 # Set all environment variables in one layer
 ENV HOME="/home/appuser" \
-    PATH="/usr/local/bin:${PATH}" \
+    PATH="/usr/local/bin:/usr/local/aws/v2/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     AWS_MCP_LOG_DIR=/app/logs
 
