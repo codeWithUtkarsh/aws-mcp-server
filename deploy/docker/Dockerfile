@@ -1,34 +1,34 @@
-# Define global args for both stages
+# Multi-stage build with platform-specific configuration
 ARG PYTHON_VERSION=3.13-slim
-ARG TARGETARCH
 
-# Build stage for Python dependencies
-FROM --platform=${BUILDPLATFORM} python:${PYTHON_VERSION} AS builder
+# =========== BUILDER STAGE ===========
+FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION} AS builder
 
-# Set working directory
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up working directory
 WORKDIR /build
 
-# Copy only files needed for dependency installation first (better caching)
+# Copy package definition files
 COPY pyproject.toml README.md LICENSE ./
-
-# Create empty src directory for pip install
-RUN mkdir -p src/aws_mcp_server
-# Copy __init__.py if it exists
-RUN touch src/aws_mcp_server/__init__.py
-
-# Install dependencies
-RUN pip install --no-cache-dir .
-
-# Copy the actual source code
 COPY src/ ./src/
 
-# Final stage
+# Install package and dependencies with pip wheel
+RUN pip install --no-cache-dir wheel && \
+    pip wheel --no-cache-dir --wheel-dir=/wheels -e .
+
+# =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
 
-# Make sure to propagate the build arg to this stage
+# Set target architecture argument
+ARG TARGETPLATFORM
 ARG TARGETARCH
 
-# Step 1: Install system packages
+# Step 1: Install system packages - keeping all original packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     curl \
@@ -48,7 +48,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sed \
     gawk \
     findutils \
-    build-essential \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -68,10 +67,10 @@ RUN if [ "${TARGETARCH}" = "arm64" ]; then \
     else \
         curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
     fi \
-    && sudo dpkg -i session-manager-plugin.deb \
-    && rm session-manager-plugin.deb || true # Ignore error if package is not installed (wrong architecture in AWS S3 bucket)
+    && dpkg -i session-manager-plugin.deb 2>/dev/null || true \
+    && rm session-manager-plugin.deb
 
-# Set up application directory, user, and permissions all in one layer
+# Set up application directory, user, and permissions
 RUN mkdir -p /app/logs && chmod 777 /app/logs \
     && useradd -m -s /bin/bash -u 10001 appuser \
     && mkdir -p /home/appuser/.aws \
@@ -83,8 +82,10 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 
-# Install the package directly (don't copy from builder)
-RUN pip install -e . --no-cache-dir
+# Copy wheels from builder and install
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels aws-mcp-server && \
+    rm -rf /wheels
 
 # Set ownership after all files have been copied
 RUN chown -R appuser:appuser /app /home/appuser/.aws
