@@ -90,18 +90,18 @@ async def execute_command(
 
     Validates, executes, and processes the results of an AWS CLI command,
     handling errors and formatting the output for better readability.
-    
+
     The command can include Unix pipes (|) to filter or transform the output,
     similar to a regular shell. The first command must be an AWS CLI command,
     and subsequent piped commands must be basic Unix utilities.
-    
+
     Supported Unix commands in pipes:
     - File operations: ls, cat, cd, pwd, cp, mv, rm, mkdir, touch, chmod, chown
     - Text processing: grep, sed, awk, cut, sort, uniq, wc, head, tail, tr, find
     - System tools: ps, top, df, du, uname, whoami, date, which, echo
     - Network tools: ping, ifconfig, netstat, curl, wget, dig, nslookup, ssh, scp
     - Other utilities: man, less, tar, gzip, zip, xargs, jq, tee
-    
+
     Examples:
     - aws s3api list-buckets --query 'Buckets[*].Name' --output text
     - aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort

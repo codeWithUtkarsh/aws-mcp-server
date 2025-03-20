@@ -268,7 +268,7 @@ def test_validate_pipe_command_valid():
         "aws ec2 describe-instances | grep running | wc -l",
         "aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort",
     ]
-    
+
     for cmd in valid_commands:
         try:
             validate_pipe_command(cmd)
@@ -289,7 +289,7 @@ def test_validate_pipe_command_invalid():
         # First command invalid AWS
         "aws | grep bucket",
     ]
-    
+
     for cmd in invalid_commands:
         with pytest.raises(CommandValidationError):
             validate_pipe_command(cmd)
@@ -302,9 +302,9 @@ async def test_execute_aws_command_with_pipe():
     with patch("aws_mcp_server.cli_executor.is_pipe_command", return_value=True):
         with patch("aws_mcp_server.cli_executor.execute_pipe_command", new_callable=AsyncMock) as mock_pipe_exec:
             mock_pipe_exec.return_value = {"status": "success", "output": "Piped result"}
-            
+
             result = await execute_aws_command("aws s3 ls | grep bucket")
-            
+
             assert result["status"] == "success"
             assert result["output"] == "Piped result"
             mock_pipe_exec.assert_called_once_with("aws s3 ls | grep bucket", None)
@@ -316,9 +316,9 @@ async def test_execute_pipe_command_success():
     with patch("aws_mcp_server.cli_executor.validate_pipe_command") as mock_validate:
         with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_pipe_exec:
             mock_pipe_exec.return_value = {"status": "success", "output": "Filtered results"}
-            
+
             result = await execute_pipe_command("aws s3 ls | grep bucket")
-            
+
             assert result["status"] == "success"
             assert result["output"] == "Filtered results"
             mock_validate.assert_called_once_with("aws s3 ls | grep bucket")
@@ -328,12 +328,10 @@ async def test_execute_pipe_command_success():
 @pytest.mark.asyncio
 async def test_execute_pipe_command_validation_error():
     """Test execute_pipe_command with validation error."""
-    with patch("aws_mcp_server.cli_executor.validate_pipe_command", 
-               side_effect=CommandValidationError("Invalid pipe command")):
-        
+    with patch("aws_mcp_server.cli_executor.validate_pipe_command", side_effect=CommandValidationError("Invalid pipe command")):
         with pytest.raises(CommandValidationError) as excinfo:
             await execute_pipe_command("invalid | pipe | command")
-            
+
         assert "Invalid pipe command" in str(excinfo.value)
 
 
@@ -341,11 +339,9 @@ async def test_execute_pipe_command_validation_error():
 async def test_execute_pipe_command_execution_error():
     """Test execute_pipe_command with execution error."""
     with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
-        with patch("aws_mcp_server.cli_executor.execute_piped_command", 
-                  side_effect=Exception("Execution error")):
-            
+        with patch("aws_mcp_server.cli_executor.execute_piped_command", side_effect=Exception("Execution error")):
             with pytest.raises(CommandExecutionError) as excinfo:
                 await execute_pipe_command("aws s3 ls | grep bucket")
-                
+
             assert "Failed to execute piped command" in str(excinfo.value)
             assert "Execution error" in str(excinfo.value)

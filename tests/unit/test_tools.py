@@ -85,11 +85,7 @@ async def test_execute_piped_command_success():
 
         assert result["status"] == "success"
         assert result["output"] == "Filtered output"
-        mock_subprocess.assert_called_once_with(
-            "aws s3 ls | grep bucket",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+        mock_subprocess.assert_called_once_with("aws s3 ls | grep bucket", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
 
 @pytest.mark.asyncio

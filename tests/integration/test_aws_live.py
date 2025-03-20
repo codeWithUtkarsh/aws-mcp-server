@@ -123,48 +123,42 @@ class TestAWSLiveIntegration:
             assert isinstance(json_data["Regions"], list)
         except json.JSONDecodeError:
             pytest.fail("Output is not valid JSON")
-            
+
     @pytest.mark.asyncio
     async def test_piped_command_execution(self, ensure_aws_credentials):
         """Test execution of a piped command with AWS CLI and Unix utilities."""
         # Use EC2 describe-regions with pipes to count regions
-        result = await execute_command(
-            command="aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | wc -l",
-            timeout=None,
-            ctx=None
-        )
-        
+        result = await execute_command(command="aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | wc -l", timeout=None, ctx=None)
+
         assert result["status"] == "success"
-        
+
         # The output should be a number (count of AWS regions)
         region_count = int(result["output"].strip())
-        
+
         # AWS has multiple regions, so the count should be > 0
         assert region_count > 0, "Expected at least one AWS region"
-        
+
         logger.info(f"Found {region_count} AWS regions")
-        
+
     @pytest.mark.asyncio
     async def test_multiple_pipes_execution(self, ensure_aws_credentials):
         """Test execution of a command with multiple pipes."""
         # Get all EC2 regions that contain 'east' and sort them
         result = await execute_command(
-            command="aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort",
-            timeout=None,
-            ctx=None
+            command="aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort", timeout=None, ctx=None
         )
-        
+
         assert result["status"] == "success"
-        
+
         # Output should contain 'east' regions only, one per line
-        regions = result["output"].strip().split('\n')
-        
+        regions = result["output"].strip().split("\n")
+
         # Verify all regions contain 'east'
         for region in regions:
-            assert 'east' in region.lower(), f"Expected 'east' in region name: {region}"
-            
+            assert "east" in region.lower(), f"Expected 'east' in region name: {region}"
+
         # Verify regions are sorted
         sorted_regions = sorted(regions)
         assert regions == sorted_regions, "Regions should be sorted"
-        
+
         logger.info(f"Found and sorted {len(regions)} 'east' regions")
