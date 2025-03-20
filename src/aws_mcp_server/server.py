@@ -82,14 +82,30 @@ async def describe_command(
 
 @mcp.tool()
 async def execute_command(
-    command: str = Field(description="Complete AWS CLI command to execute"),
+    command: str = Field(description="Complete AWS CLI command to execute (can include pipes with Unix commands)"),
     timeout: int | None = Field(description="Timeout in seconds (defaults to AWS_MCP_TIMEOUT)", default=None),
     ctx: Context | None = None,
 ) -> CommandResult:
-    """Execute an AWS CLI command.
+    """Execute an AWS CLI command, optionally with Unix command pipes.
 
     Validates, executes, and processes the results of an AWS CLI command,
     handling errors and formatting the output for better readability.
+    
+    The command can include Unix pipes (|) to filter or transform the output,
+    similar to a regular shell. The first command must be an AWS CLI command,
+    and subsequent piped commands must be basic Unix utilities.
+    
+    Supported Unix commands in pipes:
+    - File operations: ls, cat, cd, pwd, cp, mv, rm, mkdir, touch, chmod, chown
+    - Text processing: grep, sed, awk, cut, sort, uniq, wc, head, tail, tr, find
+    - System tools: ps, top, df, du, uname, whoami, date, which, echo
+    - Network tools: ping, ifconfig, netstat, curl, wget, dig, nslookup, ssh, scp
+    - Other utilities: man, less, tar, gzip, zip, xargs, jq, tee
+    
+    Examples:
+    - aws s3api list-buckets --query 'Buckets[*].Name' --output text
+    - aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort
+    - aws ec2 describe-instances | grep InstanceId | wc -l
 
     Returns:
         CommandResult containing output and status
@@ -97,7 +113,9 @@ async def execute_command(
     logger.info(f"Executing command: {command}" + (f" with timeout: {timeout}" if timeout else ""))
 
     if ctx:
-        await ctx.info("Executing AWS CLI command" + (f" with timeout: {timeout}s" if timeout else ""))
+        is_pipe = "|" in command
+        message = "Executing" + (" piped" if is_pipe else "") + " AWS CLI command"
+        await ctx.info(message + (f" with timeout: {timeout}s" if timeout else ""))
 
     try:
         result = await execute_aws_command(command, timeout)

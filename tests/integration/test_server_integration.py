@@ -95,3 +95,28 @@ class TestServerIntegration:
 
         # Verify the mock was called correctly
         mock_execute.assert_called_once_with("aws s3 ls --invalid-flag", None)
+        
+    @pytest.mark.asyncio
+    @patch("aws_mcp_server.server.execute_aws_command")
+    async def test_execute_piped_command(self, mock_execute, mock_aws_environment):
+        """Test execution of a command with pipes."""
+        # Mock a successful piped command
+        piped_output = "bucket1\nbucket2\nbucket3"
+        mock_execute.return_value = {"status": "success", "output": piped_output}
+        
+        # Call the execute_command function with a piped command
+        result = await execute_command(
+            command="aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort",
+            timeout=None,
+            ctx=None
+        )
+        
+        # Verify the results
+        assert result["status"] == "success"
+        assert result["output"] == piped_output
+        
+        # Verify the mock was called correctly
+        mock_execute.assert_called_once_with(
+            "aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort", 
+            None
+        )

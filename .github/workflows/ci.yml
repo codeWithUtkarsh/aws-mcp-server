@@ -36,7 +36,7 @@ jobs:
       - name: Run unit tests
         run: |
           # Only run unit tests, skip integration tests that require AWS resources
-          pytest --cov=aws_mcp_server -v -k "not integration" --cov-report=xml
+          pytest -v -k "not integration"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -44,3 +44,5 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
           fail_ci_if_error: false
+          verbose: true
+          config: ./codecov.yml

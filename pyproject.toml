@@ -61,3 +61,24 @@ markers = [
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov=aws_mcp_server --cov-report=xml --cov-report=term"
+
+[tool.coverage.run]
+source = ["src/aws_mcp_server"]
+omit = [
+    "*/tests/*",
+    "*/setup.py",
+    "*/conftest.py",
+    "src/aws_mcp_server/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError",
+]

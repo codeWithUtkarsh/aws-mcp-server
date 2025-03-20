@@ -10,16 +10,16 @@ import shlex
 from typing import TypedDict
 
 from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
+from aws_mcp_server.tools import (
+    CommandResult,
+    execute_piped_command,
+    is_pipe_command,
+    split_pipe_command,
+    validate_unix_command,
+)
 
 # Configure module logger
 logger = logging.getLogger(__name__)
-
-
-class CommandResult(TypedDict):
-    """Type definition for command execution results."""
-
-    status: str
-    output: str
 
 
 class CommandHelpResult(TypedDict):
@@ -104,6 +104,38 @@ def validate_aws_command(command: str) -> None:
         raise CommandValidationError("This command is restricted for security reasons")
 
 
+def validate_pipe_command(pipe_command: str) -> None:
+    """Validate a command that contains pipes.
+    
+    This checks both AWS CLI commands and Unix commands within a pipe chain.
+    
+    Args:
+        pipe_command: The piped command to validate
+        
+    Raises:
+        CommandValidationError: If any command in the pipe is invalid
+    """
+    commands = split_pipe_command(pipe_command)
+    
+    if not commands:
+        raise CommandValidationError("Empty command")
+        
+    # First command must be an AWS CLI command
+    validate_aws_command(commands[0])
+    
+    # Subsequent commands should be valid Unix commands
+    for i, cmd in enumerate(commands[1:], 1):
+        cmd_parts = shlex.split(cmd)
+        if not cmd_parts:
+            raise CommandValidationError(f"Empty command at position {i} in pipe")
+            
+        if not validate_unix_command(cmd):
+            raise CommandValidationError(
+                f"Command '{cmd_parts[0]}' at position {i} in pipe is not allowed. "
+                f"Only AWS commands and basic Unix utilities are permitted."
+            )
+
+
 async def execute_aws_command(command: str, timeout: int | None = None) -> CommandResult:
     """Execute an AWS CLI command and return the result.
 
@@ -121,6 +153,10 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         CommandValidationError: If the command is invalid
         CommandExecutionError: If the command fails to execute
     """
+    # Check if this is a piped command
+    if is_pipe_command(command):
+        return await execute_pipe_command(command, timeout)
+        
     # Validate the command
     validate_aws_command(command)
 
@@ -170,6 +206,39 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         raise
     except Exception as e:
         raise CommandExecutionError(f"Failed to execute command: {str(e)}") from e
+
+
+async def execute_pipe_command(pipe_command: str, timeout: int | None = None) -> CommandResult:
+    """Execute a command that contains pipes.
+    
+    Validates and executes a piped command where output is fed into subsequent commands.
+    The first command must be an AWS CLI command, and subsequent commands must be
+    allowed Unix utilities.
+    
+    Args:
+        pipe_command: The piped command to execute
+        timeout: Optional timeout in seconds (defaults to DEFAULT_TIMEOUT)
+        
+    Returns:
+        CommandResult containing output and status
+        
+    Raises:
+        CommandValidationError: If any command in the pipe is invalid
+        CommandExecutionError: If the command fails to execute
+    """
+    # Validate the pipe command
+    try:
+        validate_pipe_command(pipe_command)
+    except CommandValidationError as e:
+        raise CommandValidationError(f"Invalid pipe command: {str(e)}") from e
+        
+    logger.debug(f"Executing piped command: {pipe_command}")
+    
+    try:
+        # Execute the piped command using our tools module
+        return await execute_piped_command(pipe_command, timeout)
+    except Exception as e:
+        raise CommandExecutionError(f"Failed to execute piped command: {str(e)}") from e
 
 
 async def get_command_help(service: str, command: str | None = None) -> CommandHelpResult:

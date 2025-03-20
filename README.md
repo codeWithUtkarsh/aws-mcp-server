@@ -1,7 +1,7 @@
 # AWS Model Context Protocol (MCP) Server
 
 [![CI](https://github.com/alexei-led/aws-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/alexei-led/aws-mcp-server/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/alexei-led/aws-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/alexei-led/aws-mcp-server)
+[![Code Coverage](https://img.shields.io/codecov/c/github/alexei-led/aws-mcp-server/main?style=flat-square&logo=codecov)](https://codecov.io/gh/alexei-led/aws-mcp-server)
 [![Linter: Ruff](https://img.shields.io/badge/Linter-Ruff-brightgreen?style=flat-square)](https://github.com/alexei-led/aws-mcp-server)
 [![Image Tags](https://ghcr-badge.egpl.dev/alexei-led/aws-mcp-server/tags?color=%2344cc11&ignore=latest&n=4&label=image+tags&trim=)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server/versions)
 [![Image Size](https://ghcr-badge.egpl.dev/alexei-led/aws-mcp-server/size?color=%2344cc11&tag=latest&label=image+size&trim=)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server)
@@ -26,6 +26,7 @@ flowchart LR
 
 - **Command Documentation** - Detailed help information for AWS CLI commands
 - **Command Execution** - Execute AWS CLI commands and return human-readable results
+- **Unix Pipe Support** - Filter and transform AWS CLI output using standard Unix pipes and utilities
 - **Prompt Templates** - Pre-defined prompt templates for common AWS tasks following best practices
 - **Docker Integration** - Simple deployment through containerization with multi-architecture support (AMD64/x86_64 and ARM64)
 - **AWS Authentication** - Leverages existing AWS credentials on the host machine
@@ -173,6 +174,17 @@ Claude: I'll list your S3 buckets for you.
 2024-01-05 11:22:18 my-backup-bucket
 ```
 
+**Using Command Pipes**:
+```
+User: List my S3 buckets that have "backup" in their name and show them in alphabetical order
+
+Claude: Let me find that for you.
+
+2024-01-05 11:22:18 my-backup-bucket
+2024-03-01 09:44:12 weekly-backup-bucket
+2024-03-15 13:10:57 database-backup-bucket
+```
+
 **Using Prompt Templates**:
 ```
 User: I need to perform a security audit of my S3 buckets
@@ -236,12 +248,25 @@ pip install -e ".[dev]"
 # Run unit tests
 pytest -k "not integration"
 
+# Run tests with coverage report
+pytest -k "not integration" --cov-report=html
+
 # Run linting
 ruff check src/ tests/
 
 # Run formatting
 ruff format src/ tests/
 ```
+
+### Code Coverage
+
+The project includes configuration for [Codecov](https://codecov.io) to track code coverage metrics. The configuration is in the `codecov.yml` file, which:
+
+- Sets a target coverage threshold of 80%
+- Excludes test files, setup files, and documentation from coverage reports
+- Configures PR comments and status checks
+
+Coverage reports are automatically generated during CI/CD runs and uploaded to Codecov.
 
 ### Integration Testing
 

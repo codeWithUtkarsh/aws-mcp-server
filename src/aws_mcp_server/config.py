@@ -28,6 +28,8 @@ INSTRUCTIONS = """
 AWS MCP Server provides a simple interface to the AWS CLI.
 - Use the describe_command tool to get AWS CLI documentation
 - Use the execute_command tool to run AWS CLI commands
+- The execute_command tool supports Unix pipes (|) to filter or transform AWS CLI output:
+  Example: aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort
 - Use the built-in prompt templates for common AWS tasks following best practices:
   - create_resource: Create AWS resources with proper security settings
   - security_audit: Perform comprehensive service security audits
