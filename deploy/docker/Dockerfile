@@ -1,79 +1,85 @@
-FROM python:3.13-slim AS builder
-LABEL maintainer="alexei-led" \
-      description="AWS Multi-Command Proxy Server"
+# Define global args for both stages
+ARG PYTHON_VERSION=3.13-slim
+ARG TARGETARCH
+
+# Build stage for Python dependencies
+FROM python:${PYTHON_VERSION} AS builder
 
 # Set working directory
 WORKDIR /build
 
-# Install minimal dependencies required for building
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install AWS CLI v2 based on architecture
-ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
-    else \
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
-    fi \
-    && unzip awscliv2.zip \
-    && ./aws/install --bin-dir /build/bin --install-dir /build/aws-cli \
-    && rm -rf awscliv2.zip aws
-
-# Copy all project files needed for installation
+# Copy only files needed for dependency installation first (better caching)
 COPY pyproject.toml README.md LICENSE ./
-COPY src/ ./src/
+
+# Create empty src directory for pip install
+RUN mkdir -p src/aws_mcp_server
+# Copy __init__.py if it exists
+RUN touch src/aws_mcp_server/__init__.py
 
 # Install dependencies
 RUN pip install --no-cache-dir .
 
-# Start from a clean image for the final stage
-FROM python:3.13-slim
+# Copy the actual source code
+COPY src/ ./src/
 
-# Copy installed AWS CLI from builder
-COPY --from=builder /build/aws-cli /usr/local/aws-cli
-COPY --from=builder /build/bin/aws /usr/local/bin/aws
-COPY --from=builder /build/bin/aws_completer /usr/local/bin/aws_completer
+# Final stage
+FROM python:${PYTHON_VERSION}
 
-# Install only runtime dependencies
+# Install AWS CLI and all runtime dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    unzip \
+    curl \
     less \
     groff \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # Install AWS CLI based on architecture
+    && if [ "$(uname -m)" = "aarch64" ]; then \
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
+    else \
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
+    fi \
+    && unzip -q awscliv2.zip \
+    && ./aws/install \
+    && rm -rf awscliv2.zip aws
+
+# Set up application directory, user, and permissions all in one layer
+RUN mkdir -p /app/logs && chmod 777 /app/logs \
+    && useradd -m -s /bin/bash -u 10001 appuser \
+    && mkdir -p /home/appuser/.aws \
+    && chmod 700 /home/appuser/.aws
 
 WORKDIR /app
 
 # Copy application code
-COPY README.md LICENSE ./
+COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
-# Create logs directory with proper permissions
-RUN mkdir -p /app/logs && chmod 777 /app/logs
+# Install the package
+RUN pip install -e .
 
-# Create non-root user
-RUN useradd -m -s /bin/bash -u 10001 appuser
-
-# Set proper ownership
-RUN chown -R appuser:appuser /app
+# Set ownership after all files have been copied
+RUN chown -R appuser:appuser /app /home/appuser/.aws
 
 # Switch to non-root user
 USER appuser
 
+# Set all environment variables in one layer
+ENV HOME="/home/appuser" \
+    PATH="/usr/local/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    AWS_MCP_LOG_DIR=/app/logs
+
 # Add metadata
-LABEL org.opencontainers.image.source="https://github.com/alexei-led/aws-mcp-server" \
+LABEL maintainer="alexei-led" \
+      description="AWS Multi-Command Proxy Server" \
+      org.opencontainers.image.source="https://github.com/alexei-led/aws-mcp-server" \
       org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
       org.opencontainers.image.version="1.0.0"
 
 # Expose the service port
 EXPOSE 8000
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
 
 # Set command to run the server
 ENTRYPOINT ["python", "-m", "aws_mcp_server", "--tcp", "--host", "0.0.0.0"]

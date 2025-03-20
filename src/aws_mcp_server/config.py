@@ -32,7 +32,7 @@ AWS MCP Server provides a simple interface to the AWS CLI.
 
 # Application paths
 BASE_DIR = Path(__file__).parent.parent.parent
-LOG_DIR = BASE_DIR / "logs"
+LOG_DIR = Path(os.environ.get("AWS_MCP_LOG_DIR", str(BASE_DIR / "logs")))
 
 # Ensure log directory exists
 LOG_DIR.mkdir(exist_ok=True, parents=True)
