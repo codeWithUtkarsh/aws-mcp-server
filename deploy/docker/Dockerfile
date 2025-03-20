@@ -29,8 +29,22 @@ FROM python:${PYTHON_VERSION}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     curl \
+    wget \
     less \
     groff \
+    jq \
+    gnupg \
+    tar \
+    gzip \
+    zip \
+    vim \
+    net-tools \
+    dnsutils \
+    openssh-client \
+    grep \
+    sed \
+    awk \
+    findutils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     # Install AWS CLI based on architecture
@@ -41,7 +55,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fi \
     && unzip -q awscliv2.zip \
     && ./aws/install \
-    && rm -rf awscliv2.zip aws
+    && rm -rf awscliv2.zip aws \
+    # Install Session Manager plugin based on architecture
+    && if [ "$(uname -m)" = "aarch64" ]; then \
+        curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_arm64/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
+    else \
+        curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
+    fi \
+    && dpkg -i session-manager-plugin.deb \
+    && rm session-manager-plugin.deb
 
 # Set up application directory, user, and permissions all in one layer
 RUN mkdir -p /app/logs && chmod 777 /app/logs \
