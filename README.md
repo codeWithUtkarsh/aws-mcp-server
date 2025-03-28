@@ -114,7 +114,7 @@ To integrate AWS MCP Server with Claude Desktop, you'll need to edit the Claude 
    ```json
    {
      "mcpServers": {
-       "aws": {
+       "aws-mcp-server": {
          "command": "docker",
          "args": [
            "run",
