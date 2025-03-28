@@ -5,6 +5,7 @@
 - Install dependencies: `pip install -e .`
 - Install dev dependencies: `pip install -e ".[dev]"`
 - Run server: `python -m aws_mcp_server`
+- Run server with SSE transport: `AWS_MCP_TRANSPORT=sse python -m aws_mcp_server`
 - Run with MCP CLI: `mcp run src/aws_mcp_server/server.py`
 - Run tests: `pytest`
 - Run single test: `pytest tests/path/to/test_file.py::test_function_name -v`

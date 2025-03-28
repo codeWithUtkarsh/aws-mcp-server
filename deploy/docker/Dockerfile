@@ -97,7 +97,8 @@ USER appuser
 ENV HOME="/home/appuser" \
     PATH="/usr/local/bin:/usr/local/aws/v2/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
-    AWS_MCP_LOG_DIR=/app/logs
+    AWS_MCP_LOG_DIR=/app/logs \
+    AWS_MCP_TRANSPORT=stdio
 
 # Add metadata
 LABEL maintainer="alexei-led" \
@@ -109,4 +110,4 @@ LABEL maintainer="alexei-led" \
 EXPOSE 8000
 
 # Set command to run the server
-ENTRYPOINT ["python", "-m", "aws_mcp_server", "--tcp", "--host", "0.0.0.0"]
+ENTRYPOINT ["python", "-m", "aws_mcp_server"]

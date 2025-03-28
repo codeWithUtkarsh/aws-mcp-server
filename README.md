@@ -99,6 +99,7 @@ The AWS MCP Server can be configured using environment variables:
 |---------------------|-------------|---------|
 | `AWS_MCP_TIMEOUT` | Command execution timeout in seconds | 300 |
 | `AWS_MCP_MAX_OUTPUT` | Maximum output size in characters | 100000 |
+| `AWS_MCP_TRANSPORT` | Transport protocol to use ("stdio" or "sse") | stdio |
 | `AWS_PROFILE` | AWS profile to use | default |
 | `AWS_REGION` | AWS region to use | us-east-1 |
 

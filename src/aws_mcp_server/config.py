@@ -5,6 +5,7 @@ This module contains configuration settings for the AWS MCP Server.
 Environment variables:
 - AWS_MCP_TIMEOUT: Custom timeout in seconds (default: 30)
 - AWS_MCP_MAX_OUTPUT: Maximum output size in characters (default: 10000)
+- AWS_MCP_TRANSPORT: Transport protocol to use ("stdio" or "sse", default: "stdio")
 - AWS_PROFILE: AWS profile to use (default: "default")
 - AWS_REGION: AWS region to use (default: "us-east-1")
 """
@@ -18,6 +19,9 @@ SERVER_INFO = {"name": "AWS MCP Server", "version": "1.0.0"}
 # Command execution settings
 DEFAULT_TIMEOUT = int(os.environ.get("AWS_MCP_TIMEOUT", "300"))
 MAX_OUTPUT_SIZE = int(os.environ.get("AWS_MCP_MAX_OUTPUT", "100000"))
+
+# Transport protocol
+TRANSPORT = os.environ.get("AWS_MCP_TRANSPORT", "stdio")
 
 # AWS CLI settings
 AWS_PROFILE = os.environ.get("AWS_PROFILE", "default")

@@ -26,9 +26,17 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, handle_interrupt)
 
     try:
-        # FastMCP's run method handles command-line arguments,
-        # transport selection, and error handling automatically
-        mcp.run()
+        # Use configured transport protocol
+        from aws_mcp_server.config import TRANSPORT
+        
+        # Validate transport protocol
+        if TRANSPORT not in ("stdio", "sse"):
+            logger.error(f"Invalid transport protocol: {TRANSPORT}. Must be 'stdio' or 'sse'")
+            sys.exit(1)
+            
+        # Run with the specified transport protocol
+        logger.info(f"Starting server with transport protocol: {TRANSPORT}")
+        mcp.run(transport=TRANSPORT)
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received. Shutting down gracefully...")
         sys.exit(0)
