@@ -28,12 +28,12 @@ if __name__ == "__main__":
     try:
         # Use configured transport protocol
         from aws_mcp_server.config import TRANSPORT
-        
+
         # Validate transport protocol
         if TRANSPORT not in ("stdio", "sse"):
             logger.error(f"Invalid transport protocol: {TRANSPORT}. Must be 'stdio' or 'sse'")
             sys.exit(1)
-            
+
         # Run with the specified transport protocol
         logger.info(f"Starting server with transport protocol: {TRANSPORT}")
         mcp.run(transport=TRANSPORT)

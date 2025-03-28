@@ -24,15 +24,15 @@ def test_main_with_valid_transport():
         with patch("aws_mcp_server.__main__.mcp.run") as mock_run:
             # We can't easily test the full __main__ module execution
             from aws_mcp_server.__main__ import mcp
-            
+
             # Instead, we'll test the specific function we modified
             with patch("aws_mcp_server.__main__.logger") as mock_logger:
                 # Import the function to ensure proper validation
                 from aws_mcp_server.__main__ import TRANSPORT
-                
+
                 # Call the relevant function directly
                 mcp.run(transport=TRANSPORT)
-                
+
                 # Check that mcp.run was called with the correct transport
                 mock_run.assert_called_once_with(transport="stdio")
                 # Verify logger was called
@@ -43,7 +43,7 @@ def test_main_transport_validation():
     """Test transport protocol validation."""
     with patch("aws_mcp_server.config.TRANSPORT", "invalid"):
         from aws_mcp_server.config import TRANSPORT
-        
+
         # Test the main function's validation logic
         with patch("aws_mcp_server.server.mcp.run") as mock_run:
             with patch("sys.exit") as mock_exit:
@@ -54,11 +54,9 @@ def test_main_transport_validation():
                         mock_exit(1)
                     else:
                         mock_run(transport=TRANSPORT)
-                    
+
                     # Check that error was logged with invalid transport
-                    mock_logger.error.assert_called_once_with(
-                        "Invalid transport protocol: invalid. Must be 'stdio' or 'sse'"
-                    )
+                    mock_logger.error.assert_called_once_with("Invalid transport protocol: invalid. Must be 'stdio' or 'sse'")
                     # Check that exit was called
                     mock_exit.assert_called_once_with(1)
                     # Check that mcp.run was not called
