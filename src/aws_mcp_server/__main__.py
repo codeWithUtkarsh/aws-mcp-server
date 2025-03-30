@@ -14,9 +14,9 @@ from aws_mcp_server.server import logger, mcp
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)])
 
 
-def handle_interrupt(sig, frame):
+def handle_interrupt(signum, frame):
     """Handle keyboard interrupt (Ctrl+C) gracefully."""
-    logger.info("Received interrupt signal. Shutting down gracefully...")
+    logger.info(f"Received signal {signum}, shutting down gracefully...")
     sys.exit(0)
 
 
@@ -24,6 +24,7 @@ def handle_interrupt(sig, frame):
 if __name__ == "__main__":
     # Set up signal handler for graceful shutdown
     signal.signal(signal.SIGINT, handle_interrupt)
+    signal.signal(signal.SIGTERM, handle_interrupt)
 
     try:
         # Use configured transport protocol
