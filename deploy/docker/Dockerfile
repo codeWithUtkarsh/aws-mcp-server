@@ -97,7 +97,6 @@ USER appuser
 ENV HOME="/home/appuser" \
     PATH="/usr/local/bin:/usr/local/aws/v2/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
-    AWS_MCP_LOG_DIR=/app/logs \
     AWS_MCP_TRANSPORT=stdio
 
 # Add metadata
