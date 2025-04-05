@@ -5,6 +5,7 @@
 [![Linter: Ruff](https://img.shields.io/badge/Linter-Ruff-brightgreen?style=flat-square)](https://github.com/alexei-led/aws-mcp-server)
 [![Image Tags](https://ghcr-badge.egpl.dev/alexei-led/aws-mcp-server/tags?color=%2344cc11&ignore=latest&n=4&label=image+tags&trim=)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server/versions)
 [![Image Size](https://ghcr-badge.egpl.dev/alexei-led/aws-mcp-server/size?color=%2344cc11&tag=latest&label=image+size&trim=)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server)
+[![smithery badge](https://smithery.ai/badge/@alexei-led/aws-mcp-server)](https://smithery.ai/server/@alexei-led/aws-mcp-server)
 
 A lightweight service that enables AI assistants to execute AWS CLI commands through the Model Context Protocol (MCP).
 
@@ -44,7 +45,15 @@ The video demonstrates using Claude Desktop with AWS MCP Server to create a new 
 
 ## Getting Started
 
-### Option 1: Using Docker (Recommended)
+### Installing via Smithery
+
+To install AWS MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@alexei-led/aws-mcp-server):
+
+ ```bash
+ npx -y @smithery/cli install @alexei-led/aws-mcp-server --client claude
+ ```
+
+### Run Server Option 1: Using Docker (Recommended)
 
 ```bash
 # Clone repository
@@ -73,7 +82,7 @@ The Docker image supports both AMD64/x86_64 (Intel/AMD) and ARM64 (Apple Silicon
 > - `x.y.z` (e.g., `1.0.0`): Specific version
 > - `sha-abc123`: Development builds, tagged with Git commit SHA
 
-### Option 2: Using Python
+### Run Server Option 2: Using Python
 
 ```bash
 # Clone repository
@@ -95,13 +104,13 @@ python -m aws_mcp_server
 
 The AWS MCP Server can be configured using environment variables:
 
-| Environment Variable | Description | Default |
-|---------------------|-------------|---------|
-| `AWS_MCP_TIMEOUT` | Command execution timeout in seconds | 300 |
-| `AWS_MCP_MAX_OUTPUT` | Maximum output size in characters | 100000 |
-| `AWS_MCP_TRANSPORT` | Transport protocol to use ("stdio" or "sse") | stdio |
-| `AWS_PROFILE` | AWS profile to use | default |
-| `AWS_REGION` | AWS region to use | us-east-1 |
+| Environment Variable | Description                                  | Default   |
+|----------------------|----------------------------------------------|-----------|
+| `AWS_MCP_TIMEOUT`    | Command execution timeout in seconds         | 300       |
+| `AWS_MCP_MAX_OUTPUT` | Maximum output size in characters            | 100000    |
+| `AWS_MCP_TRANSPORT`  | Transport protocol to use ("stdio" or "sse") | stdio     |
+| `AWS_PROFILE`        | AWS profile to use                           | default   |
+| `AWS_REGION`         | AWS region to use                            | us-east-1 |
 
 ## Integrating with Claude Desktop
 
@@ -220,18 +229,18 @@ aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws
 
 The AWS MCP Server includes the following pre-defined prompt templates:
 
-| Prompt | Description | Parameters |
-|--------|-------------|------------|
-| `create_resource` | Generate commands to create AWS resources with best practices | `resource_type`, `resource_name` |
-| `security_audit` | Audit security settings for a specific AWS service | `service` |
-| `cost_optimization` | Find cost optimization opportunities for a service | `service` |
-| `resource_inventory` | Create comprehensive inventory of resources | `service`, `region` (optional) |
-| `troubleshoot_service` | Generate commands to troubleshoot service issues | `service`, `resource_id` |
-| `iam_policy_generator` | Create least-privilege IAM policies | `service`, `actions`, `resource_pattern` (optional) |
-| `service_monitoring` | Set up comprehensive monitoring | `service`, `metric_type` (optional) |
-| `disaster_recovery` | Implement disaster recovery solutions | `service`, `recovery_point_objective` (optional) |
-| `compliance_check` | Check compliance with standards | `compliance_standard`, `service` (optional) |
-| `resource_cleanup` | Identify and safely clean up resources | `service`, `criteria` (optional) |
+| Prompt                 | Description                                                   | Parameters                                          |
+|------------------------|---------------------------------------------------------------|-----------------------------------------------------|
+| `create_resource`      | Generate commands to create AWS resources with best practices | `resource_type`, `resource_name`                    |
+| `security_audit`       | Audit security settings for a specific AWS service            | `service`                                           |
+| `cost_optimization`    | Find cost optimization opportunities for a service            | `service`                                           |
+| `resource_inventory`   | Create comprehensive inventory of resources                   | `service`, `region` (optional)                      |
+| `troubleshoot_service` | Generate commands to troubleshoot service issues              | `service`, `resource_id`                            |
+| `iam_policy_generator` | Create least-privilege IAM policies                           | `service`, `actions`, `resource_pattern` (optional) |
+| `service_monitoring`   | Set up comprehensive monitoring                               | `service`, `metric_type` (optional)                 |
+| `disaster_recovery`    | Implement disaster recovery solutions                         | `service`, `recovery_point_objective` (optional)    |
+| `compliance_check`     | Check compliance with standards                               | `compliance_standard`, `service` (optional)         |
+| `resource_cleanup`     | Identify and safely clean up resources                        | `service`, `criteria` (optional)                    |
 
 ## Security
 
