@@ -13,16 +13,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up working directory
 WORKDIR /build
 
-# Install uv for Python package management
-RUN pip install --no-cache-dir uv
+# Install uv using the official installation method
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ln -s /root/.cargo/bin/uv /usr/local/bin/uv
 
 # Copy package definition files and lock file
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src/ ./src/
 
 # Install package and dependencies with uv, respecting the lock file
-RUN uv pip install --no-cache-dir wheel && \
-    uv pip wheel --no-cache-dir --wheel-dir=/wheels -e .
+RUN uv pip install wheel && \
+    uv pip wheel --wheel-dir=/wheels -e .
 
 # =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
