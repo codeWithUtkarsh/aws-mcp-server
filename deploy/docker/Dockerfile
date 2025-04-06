@@ -81,14 +81,14 @@ RUN if [ "${TARGETARCH}" = "arm64" ]; then \
     && ./aws/install \
     && rm -rf awscliv2.zip aws
 
-# Step 3: Install Session Manager plugin based on architecture
-RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-        curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_arm64/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
+# Step 3: Install Session Manager plugin (only for x86_64 due to compatibility issues on ARM)
+RUN if [ "${TARGETARCH}" = "amd64" ]; then \
+        curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb" \
+        && dpkg -i session-manager-plugin.deb 2>/dev/null || apt-get -f install -y \
+        && rm session-manager-plugin.deb; \
     else \
-        curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
-    fi \
-    && dpkg -i session-manager-plugin.deb 2>/dev/null || apt-get -f install -y \
-    && rm session-manager-plugin.deb
+        echo "Skipping Session Manager plugin installation for ${TARGETARCH} architecture"; \
+    fi
 
 # Set up application directory, user, and permissions
 RUN useradd -m -s /bin/bash -u 10001 appuser \
