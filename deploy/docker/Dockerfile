@@ -1,5 +1,6 @@
 # Multi-stage build with platform-specific configuration
 ARG PYTHON_VERSION=3.13-slim
+ARG VERSION
 
 # =========== BUILDER STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION} AS builder
@@ -13,13 +14,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up working directory
 WORKDIR /build
 
-# Copy package definition files
+# Create version file from ARG for build environment without Git
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 
-# Install package and dependencies with pip wheel
-RUN pip install --no-cache-dir wheel && \
-    pip wheel --no-cache-dir --wheel-dir=/wheels -e ".[prod]"
+# Make sure we have the version file available (VERSION arg is passed from makefile/GitHub Actions)
+# This allows builds to work without git history but with proper version
+RUN mkdir -p src/aws_mcp_server
+RUN echo '"""' > src/aws_mcp_server/_version.py && \
+    echo "Version file for Docker build" >> src/aws_mcp_server/_version.py && \
+    echo '"""' >> src/aws_mcp_server/_version.py && \
+    echo "" >> src/aws_mcp_server/_version.py && \
+    echo "__version__ = \"${VERSION}\"" >> src/aws_mcp_server/_version.py && \
+    echo "version = \"${VERSION}\"" >> src/aws_mcp_server/_version.py
+
+# Install plain dependencies without setuptools_scm
+RUN pip install --no-cache-dir wheel fastmcp mcp && \
+    pip wheel --no-cache-dir --wheel-dir=/wheels fastmcp mcp
 
 # =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
@@ -86,13 +97,16 @@ RUN useradd -m -s /bin/bash -u 10001 appuser \
 
 WORKDIR /app
 
-# Copy application code
-COPY pyproject.toml README.md LICENSE ./
+# Copy just the source code we need
+COPY README.md LICENSE ./
 COPY src/ ./src/
 
-# Copy wheels from builder and install
+# Copy wheels and version file from builder
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels aws-mcp-server[prod] && \
+COPY --from=builder /build/src/aws_mcp_server/_version.py ./src/aws_mcp_server/
+
+# Install dependencies and copy the code
+RUN pip install --no-cache-dir --no-index --find-links=/wheels fastmcp mcp && \
     rm -rf /wheels
 
 # Set ownership after all files have been copied - avoid .aws directory

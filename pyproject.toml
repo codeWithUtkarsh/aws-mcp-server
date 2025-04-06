@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools_scm>=7.0.0"]
+requires = ["setuptools>=61.0", "setuptools_scm>=8.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -69,7 +69,6 @@ markers = [
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--cov=aws_mcp_server --cov-report=xml --cov-report=term"
 
 [tool.coverage.run]
 source = ["src/aws_mcp_server"]
@@ -92,9 +91,5 @@ exclude_lines = [
 ]
 
 [tool.setuptools_scm]
-# Automatically determine version from Git tags
-# For release builds: uses the Git tag (e.g., 1.2.3)
-# For development: uses <last-tag>.dev<commits-since-tag>+g<commit-hash> (e.g., 1.2.3.dev4+gabc1234)
-write_to = "src/aws_mcp_server/_version.py"
-version_scheme = "post-release"
-local_scheme = "node-and-date"
+# Generate version file
+version_file = "src/aws_mcp_server/_version.py"

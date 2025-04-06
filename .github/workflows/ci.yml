@@ -67,11 +67,14 @@ jobs:
       - name: Install setuptools_scm
         run: pip install setuptools_scm
         
-      - name: Get version information
+      - name: Generate version file and get version info
         id: version
         run: |
-          # Get version from setuptools_scm - handles both tags and dev versions automatically
-          VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(root='.'))")
+          # Generate version file automatically
+          python -m setuptools_scm
+          
+          # Get the raw version from setuptools_scm
+          VERSION=$(python -m setuptools_scm)
           
           # Make version Docker-compatible (replace + with -)
           DOCKER_VERSION=$(echo "$VERSION" | tr '+' '-')
