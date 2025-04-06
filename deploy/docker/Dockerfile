@@ -13,24 +13,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up working directory
 WORKDIR /build
 
-# Install uv using the official installation method
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    ln -s /root/.cargo/bin/uv /usr/local/bin/uv
-
-# Copy package definition files and lock file
-COPY pyproject.toml uv.lock README.md LICENSE ./
+# Copy package definition files
+COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 
-# Install package and dependencies with uv, respecting the lock file
-RUN uv pip install --system wheel && \
-    uv pip wheel --system --wheel-dir=/wheels -e .
+# Install package and dependencies with pip wheel
+RUN pip install --no-cache-dir wheel && \
+    pip wheel --no-cache-dir --wheel-dir=/wheels -e ".[prod]"
 
 # =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
 
-# Set target architecture argument
+# Set build arguments
 ARG TARGETPLATFORM
 ARG TARGETARCH
+ARG BUILD_DATE
+ARG VERSION
+
+# Add metadata
+LABEL maintainer="alexei-led" \
+      description="AWS Multi-Command Proxy Server" \
+      org.opencontainers.image.source="https://github.com/alexei-led/aws-mcp-server" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
 
 # Step 1: Install system packages - keeping all original packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -57,9 +62,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Step 2: Install AWS CLI based on architecture
 RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
+        curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
     else \
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
+        curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
     fi \
     && unzip -q awscliv2.zip \
     && ./aws/install \
@@ -67,18 +72,17 @@ RUN if [ "${TARGETARCH}" = "arm64" ]; then \
 
 # Step 3: Install Session Manager plugin based on architecture
 RUN if [ "${TARGETARCH}" = "arm64" ]; then \
-        curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_arm64/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
+        curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_arm64/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
     else \
-        curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
+        curl -sSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"; \
     fi \
-    && dpkg -i session-manager-plugin.deb 2>/dev/null || true \
+    && dpkg -i session-manager-plugin.deb 2>/dev/null || apt-get -f install -y \
     && rm session-manager-plugin.deb
 
 # Set up application directory, user, and permissions
-RUN mkdir -p /app/logs && chmod 777 /app/logs \
-    && useradd -m -s /bin/bash -u 10001 appuser \
-    && mkdir -p /home/appuser/.aws \
-    && chmod 700 /home/appuser/.aws
+RUN useradd -m -s /bin/bash -u 10001 appuser \
+    && mkdir -p /app/logs && chmod 777 /app/logs \
+    && mkdir -p /home/appuser/.aws && chmod 700 /home/appuser/.aws
 
 WORKDIR /app
 
@@ -91,23 +95,17 @@ COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels aws-mcp-server[prod] && \
     rm -rf /wheels
 
-# Set ownership after all files have been copied
-RUN chown -R appuser:appuser /app /home/appuser/.aws
+# Set ownership after all files have been copied - avoid .aws directory
+RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
 
 # Set all environment variables in one layer
 ENV HOME="/home/appuser" \
-    PATH="/usr/local/bin:/usr/local/aws/v2/bin:${PATH}" \
+    PATH="/usr/local/bin:/usr/local/aws-cli/v2/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     AWS_MCP_TRANSPORT=stdio
-
-# Add metadata
-LABEL maintainer="alexei-led" \
-      description="AWS Multi-Command Proxy Server" \
-      org.opencontainers.image.source="https://github.com/alexei-led/aws-mcp-server" \
-      org.opencontainers.image.version="1.0.0"
 
 # Expose the service port
 EXPOSE 8000

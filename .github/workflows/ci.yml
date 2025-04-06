@@ -60,13 +60,34 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Get current date
+        id: date
+        run: echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Install setuptools_scm
+        run: pip install setuptools_scm
+        
+      - name: Get version information
+        id: version
+        run: |
+          # Get version from setuptools_scm - handles both tags and dev versions automatically
+          VERSION=$(python -c "from setuptools_scm import get_version; print(get_version(root='.'))")
+          
+          # Make version Docker-compatible (replace + with -)
+          DOCKER_VERSION=$(echo "$VERSION" | tr '+' '-')
+          
+          echo "version=$DOCKER_VERSION" >> $GITHUB_OUTPUT
+
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./deploy/docker/Dockerfile
           push: false
-          tags: aws-mcp-server:latest
+          tags: aws-mcp-server:${{ steps.version.outputs.version }}
           platforms: linux/amd64
+          build-args: |
+            BUILD_DATE=${{ steps.date.outputs.date }}
+            VERSION=${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

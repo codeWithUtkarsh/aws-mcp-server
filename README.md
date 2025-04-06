@@ -332,6 +332,31 @@ Integration tests verify AWS MCP Server works correctly with actual AWS resource
 - **No Python Environment Conflicts**: Avoids potential conflicts with other Python applications on your system
 - **Version Pinning**: Easily pin to specific versions for stability in production environments
 
+## Versioning
+
+This project uses [setuptools_scm](https://github.com/pypa/setuptools_scm) to automatically determine versions based on Git tags:
+
+- **Release versions**: When a Git tag exists (e.g., `1.2.3`), the version will be exactly that tag
+- **Development versions**: For commits without tags, a development version is generated in the format: 
+  `<last-tag>.dev<commits-since-tag>+g<commit-hash>.d<date>` (e.g., `1.2.3.dev4+gabc1234.d20220101`)
+
+The version is automatically included in:
+- Package version information
+- Docker image labels
+- Continuous integration builds
+
+### Creating Releases
+
+To create a new release version:
+
+```bash
+# Create and push a new tag
+git tag -a 1.2.3 -m "Release version 1.2.3"
+git push origin 1.2.3
+```
+
+The CI/CD pipeline will automatically build and publish Docker images with appropriate version tags.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

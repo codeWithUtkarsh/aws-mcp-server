@@ -61,12 +61,17 @@ run-sse: ## Run server with SSE transport
 run-mcp-cli: ## Run server with MCP CLI
 	mcp run src/aws_mcp_server/server.py
 
+# Get version information - using setuptools_scm
+VERSION := $(shell python -c "from setuptools_scm import get_version; print(get_version(root='.'))" 2>/dev/null || echo "0.0.0+unknown")
+
 # Docker related commands
-docker-build: ## Build Docker image
-	docker build -t aws-mcp-server -f deploy/docker/Dockerfile . --build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+docker-build: ## Build Docker image with proper labels and args
+	docker build -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
+		--build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
+		--build-arg VERSION=$(VERSION)
 
 docker-run: ## Run server in Docker with AWS credentials mounted
-	docker run -p 8000:8000 -v ~/.aws:/home/appuser/.aws:ro aws-mcp-server
+	docker run -p 8000:8000 -v ~/.aws:/home/appuser/.aws:ro aws-mcp-server:$(VERSION)
 
 docker-compose: ## Run server using Docker Compose
 	docker-compose -f deploy/docker/docker-compose.yml up -d
