@@ -37,6 +37,7 @@ package-dir = { "" = "src" }
 [tool.ruff]
 line-length = 160
 target-version = "py313"
+exclude = ["src/aws_mcp_server/_version.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
