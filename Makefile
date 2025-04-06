@@ -12,13 +12,13 @@ dev-install: ## Install the package with development dependencies using pip
 
 # Python related commands (with uv)
 uv-install: ## Install the package with uv
-	uv pip install -e .
+	uv pip install --system -e .
 
 uv-dev-install: ## Install the package with development dependencies using uv
-	uv pip install -e ".[dev]"
+	uv pip install --system -e ".[dev]"
 
 uv-update-lock: ## Update the uv.lock file with current dependencies
-	uv pip compile pyproject.toml -o uv.lock
+	uv pip compile --system pyproject.toml -o uv.lock
 
 lint: ## Run linters (ruff check and format --check)
 	ruff check src/ tests/

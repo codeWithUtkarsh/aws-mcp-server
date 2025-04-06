@@ -22,8 +22,8 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src/ ./src/
 
 # Install package and dependencies with uv, respecting the lock file
-RUN uv pip install wheel && \
-    uv pip wheel --wheel-dir=/wheels -e .
+RUN uv pip install --system wheel && \
+    uv pip wheel --system --wheel-dir=/wheels -e .
 
 # =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}

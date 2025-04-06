@@ -33,8 +33,8 @@ jobs:
 
       - name: Install dependencies using uv
         run: |
-          # Install dependencies using uv with the lock file
-          uv pip install -e ".[dev]"
+          # Install dependencies using uv with the lock file and the --system flag
+          uv pip install --system -e ".[dev]"
 
       - name: Lint
         run: make lint
