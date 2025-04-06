@@ -13,13 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up working directory
 WORKDIR /build
 
-# Copy package definition files
-COPY pyproject.toml README.md LICENSE ./
+# Install uv for Python package management
+RUN pip install --no-cache-dir uv
+
+# Copy package definition files and lock file
+COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src/ ./src/
 
-# Install package and dependencies with pip wheel
-RUN pip install --no-cache-dir wheel && \
-    pip wheel --no-cache-dir --wheel-dir=/wheels -e .
+# Install package and dependencies with uv, respecting the lock file
+RUN uv pip install --no-cache-dir wheel && \
+    uv pip wheel --no-cache-dir --wheel-dir=/wheels -e .
 
 # =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
@@ -84,7 +87,7 @@ COPY src/ ./src/
 
 # Copy wheels from builder and install
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels aws-mcp-server && \
+RUN pip install --no-cache-dir --no-index --find-links=/wheels aws-mcp-server[prod] && \
     rm -rf /wheels
 
 # Set ownership after all files have been copied

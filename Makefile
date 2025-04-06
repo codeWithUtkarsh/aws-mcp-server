@@ -1,14 +1,24 @@
-.PHONY: help install dev-install test test-unit test-integration test-all test-coverage lint lint-fix format clean docker-build docker-run docker-compose docker-compose-down docker-buildx
+.PHONY: help install dev-install uv-install uv-dev-install uv-update-lock test test-unit test-integration test-all test-coverage lint lint-fix format clean docker-build docker-run docker-compose docker-compose-down docker-buildx
 
 # Default target
 .DEFAULT_GOAL := help
 
-# Python related commands (with optional uv support)
-install: ## Install the package
+# Python related commands (with pip)
+install: ## Install the package with pip
 	pip install -e .
 
-dev-install: ## Install the package with development dependencies
+dev-install: ## Install the package with development dependencies using pip
 	pip install -e ".[dev]"
+
+# Python related commands (with uv)
+uv-install: ## Install the package with uv
+	uv pip install -e .
+
+uv-dev-install: ## Install the package with development dependencies using uv
+	uv pip install -e ".[dev]"
+
+uv-update-lock: ## Update the uv.lock file with current dependencies
+	uv pip compile pyproject.toml -o uv.lock
 
 lint: ## Run linters (ruff check and format --check)
 	ruff check src/ tests/
@@ -53,7 +63,7 @@ run-mcp-cli: ## Run server with MCP CLI
 
 # Docker related commands
 docker-build: ## Build Docker image
-	docker build -t aws-mcp-server -f deploy/docker/Dockerfile .
+	docker build -t aws-mcp-server -f deploy/docker/Dockerfile . --build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 docker-run: ## Run server in Docker with AWS credentials mounted
 	docker run -p 8000:8000 -v ~/.aws:/home/appuser/.aws:ro aws-mcp-server

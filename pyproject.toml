@@ -32,6 +32,11 @@ dev = [
     "ruff>=0.2.0",
     "moto>=4.0.0",
 ]
+# Production dependencies, optimized for Docker
+prod = [
+    "fastmcp>=0.4.1",
+    "mcp>=1.0.0",
+]
 
 [tool.setuptools]
 packages = ["aws_mcp_server"]
