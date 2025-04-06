@@ -36,21 +36,28 @@ def test_run_startup_checks():
 
 
 @pytest.mark.asyncio
-async def test_describe_command():
-    """Test the describe_command tool."""
+@pytest.mark.parametrize(
+    "service,command,expected_result",
+    [
+        ("s3", None, {"help_text": "Test help text"}),
+        ("s3", "ls", {"help_text": "Test help text"}),
+        ("ec2", "describe-instances", {"help_text": "Test help text"}),
+    ],
+)
+async def test_describe_command(service, command, expected_result):
+    """Test the describe_command tool with various inputs."""
     # Mock the get_command_help function instead of execute_aws_command
     with patch("aws_mcp_server.server.get_command_help", new_callable=AsyncMock) as mock_get_help:
-        mock_get_help.return_value = {"help_text": "Test help text"}
+        mock_get_help.return_value = expected_result
 
-        # Call the tool with service only
-        result = await describe_command(service="s3")
-        assert result == {"help_text": "Test help text"}
-        mock_get_help.assert_called_with("s3", ANY)
+        # Call the tool with specified service and command
+        result = await describe_command(service=service, command=command)
 
-        # Call the tool with service and command
-        result = await describe_command(service="s3", command="ls")
-        assert result == {"help_text": "Test help text"}
-        mock_get_help.assert_called_with("s3", "ls")
+        # Verify the result
+        assert result == expected_result
+
+        # Verify the correct arguments were passed to the mocked function
+        mock_get_help.assert_called_with(service, command)
 
 
 @pytest.mark.asyncio
@@ -80,27 +87,32 @@ async def test_describe_command_exception_handling():
 
 
 @pytest.mark.asyncio
-async def test_execute_command_success():
+@pytest.mark.parametrize(
+    "command,timeout,expected_result",
+    [
+        # Basic success case
+        ("aws s3 ls", None, {"status": "success", "output": "Test output"}),
+        # Success with custom timeout
+        ("aws s3 ls", 60, {"status": "success", "output": "Test output"}),
+        # Complex command success
+        ("aws ec2 describe-instances --filters Name=instance-state-name,Values=running", None, {"status": "success", "output": "Running instances"}),
+    ],
+)
+async def test_execute_command_success(command, timeout, expected_result):
     """Test the execute_command tool with successful execution."""
     # Mock the execute_aws_command function
     with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "success", "output": "Test output"}
-        result = await execute_command(command="aws s3 ls")
-        assert result["status"] == "success"
-        assert result["output"] == "Test output"
-        mock_execute.assert_called_with("aws s3 ls", ANY)
+        mock_execute.return_value = expected_result
 
+        # Call the execute_command function
+        result = await execute_command(command=command, timeout=timeout)
 
-@pytest.mark.asyncio
-async def test_execute_command_with_timeout():
-    """Test the execute_command tool with custom timeout."""
-    # Mock the execute_aws_command function
-    with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "success", "output": "Test output"}
-        result = await execute_command(command="aws s3 ls", timeout=60)
-        assert result["status"] == "success"
-        assert result["output"] == "Test output"
-        mock_execute.assert_called_with("aws s3 ls", 60)
+        # Verify the result
+        assert result["status"] == expected_result["status"]
+        assert result["output"] == expected_result["output"]
+
+        # Verify the correct arguments were passed to the mocked function
+        mock_execute.assert_called_with(command, timeout if timeout else ANY)
 
 
 @pytest.mark.asyncio
@@ -154,43 +166,33 @@ async def test_execute_command_with_context_and_timeout():
 
 
 @pytest.mark.asyncio
-async def test_execute_command_validation_error():
-    """Test the execute_command tool with validation error."""
-    # Mock the execute_aws_command function to raise validation error
-    with patch("aws_mcp_server.server.execute_aws_command", side_effect=CommandValidationError("Invalid command")) as mock_execute:
+@pytest.mark.parametrize(
+    "command,exception,expected_error_type,expected_message",
+    [
+        # Validation error
+        ("not aws", CommandValidationError("Invalid command"), "Command validation error", "Invalid command"),
+        # Execution error
+        ("aws s3 ls", CommandExecutionError("Execution failed"), "Command execution error", "Execution failed"),
+        # Timeout error
+        ("aws ec2 describe-instances", CommandExecutionError("Command timed out"), "Command execution error", "Command timed out"),
+        # Generic/unexpected error
+        ("aws dynamodb scan", Exception("Unexpected error"), "Unexpected error", "Unexpected error"),
+    ],
+)
+async def test_execute_command_errors(command, exception, expected_error_type, expected_message):
+    """Test the execute_command tool with various error scenarios."""
+    # Mock the execute_aws_command function to raise the specified exception
+    with patch("aws_mcp_server.server.execute_aws_command", side_effect=exception) as mock_execute:
         # Call the tool
-        result = await execute_command(command="not aws")
+        result = await execute_command(command=command)
 
+        # Verify error status and message
         assert result["status"] == "error"
-        assert "Command validation error" in result["output"]
-        mock_execute.assert_called_with("not aws", ANY)
+        assert expected_error_type in result["output"]
+        assert expected_message in result["output"]
 
-
-@pytest.mark.asyncio
-async def test_execute_command_execution_error():
-    """Test the execute_command tool with execution error."""
-    # Mock the execute_aws_command function to raise execution error
-    with patch("aws_mcp_server.server.execute_aws_command", side_effect=CommandExecutionError("Execution failed")) as mock_execute:
-        # Call the tool
-        result = await execute_command(command="aws s3 ls")
-
-        assert result["status"] == "error"
-        assert "Command execution error" in result["output"]
-        assert "Execution failed" in result["output"]
-        mock_execute.assert_called_with("aws s3 ls", ANY)
-
-
-@pytest.mark.asyncio
-async def test_execute_command_unexpected_error():
-    """Test the execute_command tool with unexpected errors."""
-    # Mock the execute_aws_command function to raise a generic exception
-    with patch("aws_mcp_server.server.execute_aws_command", side_effect=Exception("Unexpected error")) as mock_execute:
-        # Call the tool
-        result = await execute_command(command="aws s3 ls")
-
-        assert result["status"] == "error"
-        assert "Unexpected error" in result["output"]
-        mock_execute.assert_called_with("aws s3 ls", ANY)
+        # Verify the command was called correctly
+        mock_execute.assert_called_with(command, ANY)
 
 
 @pytest.mark.asyncio

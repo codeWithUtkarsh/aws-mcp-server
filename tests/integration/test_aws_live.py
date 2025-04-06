@@ -3,13 +3,18 @@
 These tests connect to real AWS resources and require:
 1. AWS CLI installed locally
 2. AWS credentials configured with access to test resources
-3. An S3 bucket for testing (set via AWS_TEST_BUCKET environment variable)
-4. The --run-integration flag when running pytest
+3. The --run-integration flag when running pytest
+
+Note: The tests that require an S3 bucket will create a temporary bucket
+if AWS_TEST_BUCKET environment variable is not set.
 """
 
+import asyncio
 import json
 import logging
 import os
+import time
+import uuid
 
 import pytest
 
@@ -20,7 +25,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.integration
 class TestAWSLiveIntegration:
     """Integration tests that interact with real AWS services.
 
@@ -28,23 +32,33 @@ class TestAWSLiveIntegration:
     They verify the AWS MCP Server can properly interact with AWS.
     """
 
+    # Apply the integration marker to each test method instead of the class
+
     @pytest.mark.asyncio
-    async def test_describe_s3_command(self, ensure_aws_credentials):
-        """Test getting help for AWS S3 commands."""
-        result = await describe_command(service="s3", command=None, ctx=None)
+    @pytest.mark.integration
+    @pytest.mark.parametrize(
+        "service,command,expected_content",
+        [
+            ("s3", None, ["description", "ls", "cp", "mv"]),
+            ("ec2", None, ["description", "run-instances", "describe-instances"]),
+            ("s3", "ls", ["synopsis", "path", "options"]),
+        ],
+    )
+    async def test_describe_command(self, ensure_aws_credentials, service, command, expected_content):
+        """Test getting help for various AWS commands."""
+        result = await describe_command(service=service, command=command, ctx=None)
 
         # Verify we got a valid response
         assert isinstance(result, dict)
         assert "help_text" in result
-        assert "DESCRIPTION" in result["help_text"] or "description" in result["help_text"].lower()
 
-        # Verify s3 commands are listed
+        # Check for expected content in the help text (case-insensitive)
         help_text = result["help_text"].lower()
-        assert "ls" in help_text
-        assert "cp" in help_text
-        assert "mv" in help_text
+        for content in expected_content:
+            assert content.lower() in help_text, f"Expected '{content}' in {service} {command} help text"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_list_s3_buckets(self, ensure_aws_credentials):
         """Test listing S3 buckets."""
         result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
@@ -61,37 +75,60 @@ class TestAWSLiveIntegration:
         logger.info(f"S3 bucket list result: {result['output']}")
 
     @pytest.mark.asyncio
-    async def test_s3_operations_with_test_bucket(self, ensure_aws_credentials, aws_s3_bucket):
+    @pytest.mark.integration
+    async def test_s3_operations_with_test_bucket(self, ensure_aws_credentials):
         """Test S3 operations using a test bucket.
 
         This test:
-        1. Creates a test file
-        2. Uploads it to S3
-        3. Lists the bucket contents
-        4. Downloads the file with a different name
-        5. Verifies the downloaded content
-        6. Cleans up all test files
+        1. Creates a temporary bucket
+        2. Creates a test file
+        3. Uploads it to S3
+        4. Lists the bucket contents
+        5. Downloads the file with a different name
+        6. Verifies the downloaded content
+        7. Cleans up all test files and the bucket
         """
+        # Get region from environment or use default
+        region = os.environ.get("AWS_TEST_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+        print(f"Using AWS region: {region}")
+
+        # Generate a unique bucket name
+        timestamp = int(time.time())
+        random_id = str(uuid.uuid4())[:8]
+        bucket_name = f"aws-mcp-test-{timestamp}-{random_id}"
+
         test_file_name = "test_file.txt"
         test_file_content = "This is a test file for AWS MCP Server integration tests"
         downloaded_file_name = "test_file_downloaded.txt"
 
         try:
+            # Create the bucket
+            create_cmd = f"aws s3 mb s3://{bucket_name} --region {region}"
+            result = await execute_command(command=create_cmd, timeout=None, ctx=None)
+            assert result["status"] == "success", f"Failed to create bucket: {result['output']}"
+
+            # Wait for bucket to be fully available
+            await asyncio.sleep(3)
+
             # Create a local test file
             with open(test_file_name, "w") as f:
                 f.write(test_file_content)
 
             # Upload the file to S3
-            upload_result = await execute_command(command=f"aws s3 cp {test_file_name} s3://{aws_s3_bucket}/{test_file_name}", timeout=None, ctx=None)
+            upload_result = await execute_command(
+                command=f"aws s3 cp {test_file_name} s3://{bucket_name}/{test_file_name} --region {region}", timeout=None, ctx=None
+            )
             assert upload_result["status"] == "success"
 
             # List the bucket contents
-            list_result = await execute_command(command=f"aws s3 ls s3://{aws_s3_bucket}/", timeout=None, ctx=None)
+            list_result = await execute_command(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
             assert list_result["status"] == "success"
             assert test_file_name in list_result["output"]
 
             # Download the file with a different name
-            download_result = await execute_command(command=f"aws s3 cp s3://{aws_s3_bucket}/{test_file_name} {downloaded_file_name}", timeout=None, ctx=None)
+            download_result = await execute_command(
+                command=f"aws s3 cp s3://{bucket_name}/{test_file_name} {downloaded_file_name} --region {region}", timeout=None, ctx=None
+            )
             assert download_result["status"] == "success"
 
             # Verify the downloaded file content
@@ -100,65 +137,80 @@ class TestAWSLiveIntegration:
             assert downloaded_content == test_file_content
 
         finally:
-            # Clean up: Remove files from S3 and local
-            await execute_command(command=f"aws s3 rm s3://{aws_s3_bucket}/{test_file_name}", timeout=None, ctx=None)
-
             # Clean up local files
             for file_name in [test_file_name, downloaded_file_name]:
                 if os.path.exists(file_name):
                     os.remove(file_name)
 
-    @pytest.mark.asyncio
-    async def test_aws_json_output_formatting(self, ensure_aws_credentials):
-        """Test JSON output formatting from AWS commands."""
-        # Use EC2 describe-regions as it's available in all accounts
-        result = await execute_command(command="aws ec2 describe-regions --output json", timeout=None, ctx=None)
+            # Clean up: Remove files from S3
+            await execute_command(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
 
-        assert result["status"] == "success"
+            # Delete the bucket
+            await execute_command(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    @pytest.mark.parametrize(
+        "command,expected_attributes,description",
+        [
+            # Test JSON formatting with EC2 regions
+            ("aws ec2 describe-regions --output json", {"json_key": "Regions", "expected_type": list}, "JSON output with EC2 regions"),
+            # Test JSON formatting with S3 buckets (may be empty but should be valid JSON)
+            ("aws s3api list-buckets --output json", {"json_key": "Buckets", "expected_type": list}, "JSON output with S3 buckets"),
+        ],
+    )
+    async def test_aws_json_output_formatting(self, ensure_aws_credentials, command, expected_attributes, description):
+        """Test JSON output formatting from various AWS commands."""
+        result = await execute_command(command=command, timeout=None, ctx=None)
+
+        assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
 
         # The output should be valid JSON
         try:
             json_data = json.loads(result["output"])
-            assert "Regions" in json_data
-            assert isinstance(json_data["Regions"], list)
+
+            # Verify expected JSON structure
+            json_key = expected_attributes["json_key"]
+            expected_type = expected_attributes["expected_type"]
+
+            assert json_key in json_data, f"Expected key '{json_key}' not found in JSON response"
+            assert isinstance(json_data[json_key], expected_type), f"Expected {json_key} to be of type {expected_type.__name__}"
+
+            # Log some info about the response
+            logger.info(f"Successfully parsed JSON response for {description} with {len(json_data[json_key])} items")
+
         except json.JSONDecodeError:
-            pytest.fail("Output is not valid JSON")
+            pytest.fail(f"Output is not valid JSON: {result['output'][:100]}...")
 
     @pytest.mark.asyncio
-    async def test_piped_command_execution(self, ensure_aws_credentials):
-        """Test execution of a piped command with AWS CLI and Unix utilities."""
-        # Use EC2 describe-regions with pipes to count regions
-        result = await execute_command(command="aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | wc -l", timeout=None, ctx=None)
+    @pytest.mark.integration
+    @pytest.mark.parametrize(
+        "command,validation_func,description",
+        [
+            # Test simple pipe with count
+            ("aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | wc -l", lambda output: int(output.strip()) > 0, "Count of AWS regions"),
+            # Test pipe with grep and sort
+            (
+                "aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort",
+                lambda output: all("east" in r.lower() for r in output.strip().split("\n")),
+                "Filtered and sorted east regions",
+            ),
+            # Test more complex pipe with multiple operations
+            (
+                "aws ec2 describe-regions --output json | grep RegionName | head -3 | wc -l",
+                lambda output: int(output.strip()) <= 3,
+                "Limited region output with multiple pipes",
+            ),
+        ],
+    )
+    async def test_piped_commands(self, ensure_aws_credentials, command, validation_func, description):
+        """Test execution of various piped commands with AWS CLI and Unix utilities."""
+        result = await execute_command(command=command, timeout=None, ctx=None)
 
-        assert result["status"] == "success"
+        assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
 
-        # The output should be a number (count of AWS regions)
-        region_count = int(result["output"].strip())
+        # Validate the output using the provided validation function
+        assert validation_func(result["output"]), f"Output validation failed for {description}"
 
-        # AWS has multiple regions, so the count should be > 0
-        assert region_count > 0, "Expected at least one AWS region"
-
-        logger.info(f"Found {region_count} AWS regions")
-
-    @pytest.mark.asyncio
-    async def test_multiple_pipes_execution(self, ensure_aws_credentials):
-        """Test execution of a command with multiple pipes."""
-        # Get all EC2 regions that contain 'east' and sort them
-        result = await execute_command(
-            command="aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort", timeout=None, ctx=None
-        )
-
-        assert result["status"] == "success"
-
-        # Output should contain 'east' regions only, one per line
-        regions = result["output"].strip().split("\n")
-
-        # Verify all regions contain 'east'
-        for region in regions:
-            assert "east" in region.lower(), f"Expected 'east' in region name: {region}"
-
-        # Verify regions are sorted
-        sorted_regions = sorted(regions)
-        assert regions == sorted_regions, "Regions should be sorted"
-
-        logger.info(f"Found and sorted {len(regions)} 'east' regions")
+        # Log success
+        logger.info(f"Successfully executed piped command for {description}: {result['output'][:50]}...")

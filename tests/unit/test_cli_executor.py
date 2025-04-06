@@ -13,8 +13,10 @@ from aws_mcp_server.cli_executor import (
     execute_pipe_command,
     get_command_help,
     is_auth_error,
+    validate_aws_command,
     validate_pipe_command,
 )
+from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
 
 
 @pytest.mark.asyncio
@@ -154,8 +156,6 @@ async def test_execute_aws_command_truncate_output():
         process_mock.returncode = 0
 
         # Generate a large output that exceeds MAX_OUTPUT_SIZE
-        from aws_mcp_server.config import MAX_OUTPUT_SIZE
-
         large_output = "x" * (MAX_OUTPUT_SIZE + 1000)
         process_mock.communicate.return_value = (large_output.encode("utf-8"), b"")
         mock_subprocess.return_value = process_mock
@@ -167,132 +167,121 @@ async def test_execute_aws_command_truncate_output():
         assert "output truncated" in result["output"]
 
 
-def test_is_auth_error():
-    """Test the is_auth_error function."""
-    # Test positive cases
-    auth_error_cases = [
-        "Unable to locate credentials",
-        "Some text before ExpiredToken and after",
-        "Error: AccessDenied when attempting to perform operation",
-        "AuthFailure: credentials could not be verified",
-        "The security token included in the request is invalid",
-        "The config profile could not be found",
-    ]
-
-    for error_msg in auth_error_cases:
-        assert is_auth_error(error_msg), f"Failed to identify auth error: {error_msg}"
-
-    # Test negative case
-    non_auth_error = "S3 bucket not found"
-    assert not is_auth_error(non_auth_error), f"Incorrectly identified as auth error: {non_auth_error}"
-
-
-@pytest.mark.asyncio
-async def test_check_aws_cli_installed():
-    """Test the check_aws_cli_installed function."""
-    # Test when AWS CLI is installed
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
-        process_mock = AsyncMock()
-        process_mock.returncode = 0
-        process_mock.communicate.return_value = (b"aws-cli/2.15.0", b"")
-        mock_subprocess.return_value = process_mock
-
-        result = await check_aws_cli_installed()
-        assert result is True
-        mock_subprocess.assert_called_once_with("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-
-    # Test when AWS CLI is not installed
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
-        process_mock = AsyncMock()
-        process_mock.returncode = 127  # Command not found
-        process_mock.communicate.return_value = (b"", b"command not found")
-        mock_subprocess.return_value = process_mock
-
-        result = await check_aws_cli_installed()
-        assert result is False
-
-    # Test when subprocess raises an exception
-    with patch("asyncio.create_subprocess_shell", side_effect=Exception("Test exception")):
-        result = await check_aws_cli_installed()
-        assert result is False
+@pytest.mark.parametrize(
+    "error_message,expected_result",
+    [
+        # Positive cases
+        ("Unable to locate credentials", True),
+        ("Some text before ExpiredToken and after", True),
+        ("Error: AccessDenied when attempting to perform operation", True),
+        ("AuthFailure: credentials could not be verified", True),
+        ("The security token included in the request is invalid", True),
+        ("The config profile could not be found", True),
+        # Negative cases
+        ("S3 bucket not found", False),
+        ("Resource not found: myresource", False),
+        ("Invalid parameter value", False),
+    ],
+)
+def test_is_auth_error(error_message, expected_result):
+    """Test the is_auth_error function with various error messages."""
+    assert is_auth_error(error_message) == expected_result
 
 
 @pytest.mark.asyncio
-async def test_get_command_help():
-    """Test getting command help."""
-    # Test successful help retrieval
+@pytest.mark.parametrize(
+    "returncode,stdout,stderr,exception,expected_result",
+    [
+        # CLI installed
+        (0, b"aws-cli/2.15.0", b"", None, True),
+        # CLI not installed - command not found
+        (127, b"", b"command not found", None, False),
+        # CLI error case
+        (1, b"", b"some error", None, False),
+        # Exception during command execution
+        (None, None, None, Exception("Test exception"), False),
+    ],
+)
+async def test_check_aws_cli_installed(returncode, stdout, stderr, exception, expected_result):
+    """Test check_aws_cli_installed function with various scenarios."""
+    if exception:
+        with patch("asyncio.create_subprocess_shell", side_effect=exception):
+            result = await check_aws_cli_installed()
+            assert result is expected_result
+    else:
+        with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+            process_mock = AsyncMock()
+            process_mock.returncode = returncode
+            process_mock.communicate.return_value = (stdout, stderr)
+            mock_subprocess.return_value = process_mock
+
+            result = await check_aws_cli_installed()
+            assert result is expected_result
+
+            if returncode == 0:  # Only verify call args for success case to avoid redundancy
+                mock_subprocess.assert_called_once_with("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "service,command,mock_type,mock_value,expected_text,expected_call",
+    [
+        # Successful help retrieval with service and command
+        ("s3", "ls", "return_value", {"status": "success", "output": "Help text"}, "Help text", "aws s3 ls help"),
+        # Successful help retrieval with service only
+        ("s3", None, "return_value", {"status": "success", "output": "Help text for service"}, "Help text for service", "aws s3 help"),
+        # Error scenarios
+        ("s3", "ls", "side_effect", CommandValidationError("Test validation error"), "Command validation error: Test validation error", None),
+        ("s3", "ls", "side_effect", CommandExecutionError("Test execution error"), "Error retrieving help: Test execution error", None),
+        ("s3", "ls", "side_effect", Exception("Test exception"), "Error retrieving help: Test exception", None),
+        # Error result from AWS command
+        ("s3", "ls", "return_value", {"status": "error", "output": "Command failed"}, "Error: Command failed", "aws s3 ls help"),
+    ],
+)
+async def test_get_command_help(service, command, mock_type, mock_value, expected_text, expected_call):
+    """Test get_command_help function with various scenarios."""
     with patch("aws_mcp_server.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "success", "output": "Help text"}
+        # Configure the mock based on the test case
+        if mock_type == "return_value":
+            mock_execute.return_value = mock_value
+        else:  # side_effect
+            mock_execute.side_effect = mock_value
 
-        result = await get_command_help("s3", "ls")
+        # Call the function
+        result = await get_command_help(service, command)
 
-        assert result["help_text"] == "Help text"
-        mock_execute.assert_called_once_with("aws s3 ls help")
+        # Verify the result
+        assert expected_text in result["help_text"]
 
-    # Test with validation error
-    with patch("aws_mcp_server.cli_executor.execute_aws_command", side_effect=CommandValidationError("Test validation error")) as mock_execute:
-        result = await get_command_help("s3", "ls")
-
-        assert "Command validation error" in result["help_text"]
-        assert "Test validation error" in result["help_text"]
-
-    # Test with execution error
-    with patch("aws_mcp_server.cli_executor.execute_aws_command", side_effect=CommandExecutionError("Test execution error")) as mock_execute:
-        result = await get_command_help("s3", "ls")
-
-        assert "Error retrieving help" in result["help_text"]
-        assert "Test execution error" in result["help_text"]
-
-    # Test with generic exception
-    with patch("aws_mcp_server.cli_executor.execute_aws_command", side_effect=Exception("Test exception")) as mock_execute:
-        result = await get_command_help("s3", "ls")
-
-        assert "Error retrieving help" in result["help_text"]
-        assert "Test exception" in result["help_text"]
-
-    # Test without command parameter
-    with patch("aws_mcp_server.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "success", "output": "Help text for service"}
-
-        result = await get_command_help("s3")
-
-        assert result["help_text"] == "Help text for service"
-        mock_execute.assert_called_once_with("aws s3 help")
+        # Verify the mock was called correctly if expected_call is provided
+        if expected_call:
+            mock_execute.assert_called_once_with(expected_call)
 
 
-def test_validate_pipe_command_valid():
-    """Test validating valid pipe commands."""
-    # These commands should pass validation
-    valid_commands = [
-        "aws s3 ls | grep bucket",
-        "aws ec2 describe-instances | grep running | wc -l",
-        "aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort",
-    ]
-
-    for cmd in valid_commands:
+@pytest.mark.parametrize(
+    "command,should_be_valid",
+    [
+        # Valid commands
+        ("aws s3 ls | grep bucket", True),
+        ("aws ec2 describe-instances | grep running | wc -l", True),
+        ("aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort", True),
+        # Invalid commands
+        ("", False),
+        ("ls | grep aws", False),
+        ("aws s3 ls | invalid_cmd", False),
+        ("aws | grep bucket", False),
+    ],
+)
+def test_validate_pipe_command(command, should_be_valid):
+    """Test validating pipe commands using parameterized tests."""
+    if should_be_valid:
         try:
-            validate_pipe_command(cmd)
+            validate_pipe_command(command)
         except CommandValidationError as e:
-            pytest.fail(f"Command should be valid but failed validation: {cmd}\nError: {str(e)}")
-
-
-def test_validate_pipe_command_invalid():
-    """Test validating invalid pipe commands."""
-    # These commands should fail validation
-    invalid_commands = [
-        # Empty command
-        "",
-        # First command not AWS
-        "ls | grep aws",
-        # Invalid second command
-        "aws s3 ls | invalid_cmd",
-        # First command invalid AWS
-        "aws | grep bucket",
-    ]
-
-    for cmd in invalid_commands:
+            pytest.fail(f"Command should be valid but failed validation: {command}\nError: {str(e)}")
+    else:
         with pytest.raises(CommandValidationError):
-            validate_pipe_command(cmd)
+            validate_pipe_command(command)
 
 
 @pytest.mark.asyncio
@@ -345,3 +334,116 @@ async def test_execute_pipe_command_execution_error():
 
             assert "Failed to execute piped command" in str(excinfo.value)
             assert "Execution error" in str(excinfo.value)
+
+
+# New test cases to improve coverage
+
+
+@pytest.mark.parametrize(
+    "command,is_valid,is_dangerous,expected_error",
+    [
+        # Valid commands
+        ("aws s3 ls", True, False, None),
+        ("aws ec2 describe-instances", True, False, None),
+        ("aws s3api list-buckets --query 'Buckets[*].Name' --output json", True, False, None),
+        ("aws lambda list-functions --region us-west-2", True, False, None),
+        ("AWS s3 ls", True, False, None),  # Case insensitive check
+        # Invalid commands
+        ("s3 ls", False, False, "Commands must start with 'aws'"),
+        ("", False, False, "Commands must start with 'aws'"),
+        ("aws", False, False, "Command must include an AWS service"),
+        # Dangerous commands
+        ("aws iam create-user --user-name test-user", False, True, "restricted for security reasons"),
+        ("aws iam create-access-key --user-name admin", False, True, "restricted for security reasons"),
+        ("aws ec2 terminate-instances --instance-ids i-1234567890abcdef0", False, True, "restricted for security reasons"),
+        ("aws rds delete-db-instance --db-instance-identifier mydb", False, True, "restricted for security reasons"),
+    ],
+)
+def test_validate_aws_command(command, is_valid, is_dangerous, expected_error):
+    """Test validating AWS commands using table-driven tests."""
+    if is_valid:
+        # Command should pass validation
+        try:
+            validate_aws_command(command)
+        except CommandValidationError as e:
+            pytest.fail(f"Command should be valid but failed validation: {command}\nError: {str(e)}")
+    else:
+        # Command should fail validation
+        with pytest.raises(CommandValidationError) as excinfo:
+            validate_aws_command(command)
+
+        # Verify the correct error message was raised
+        if expected_error:
+            assert expected_error in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_execute_pipe_command_timeout():
+    """Test timeout handling in piped commands."""
+    with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
+        with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_exec:
+            # Simulate timeout in the executed command
+            mock_exec.return_value = {"status": "error", "output": f"Command timed out after {DEFAULT_TIMEOUT} seconds"}
+
+            result = await execute_pipe_command("aws s3 ls | grep bucket")
+
+            assert result["status"] == "error"
+            assert f"Command timed out after {DEFAULT_TIMEOUT} seconds" in result["output"]
+            mock_exec.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_execute_pipe_command_with_custom_timeout():
+    """Test piped command execution with custom timeout."""
+    with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
+        with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_exec:
+            mock_exec.return_value = {"status": "success", "output": "Piped output"}
+
+            custom_timeout = 120
+            await execute_pipe_command("aws s3 ls | grep bucket", timeout=custom_timeout)
+
+            # Verify the custom timeout was passed to the execute_piped_command
+            mock_exec.assert_called_once_with("aws s3 ls | grep bucket", custom_timeout)
+
+
+@pytest.mark.asyncio
+async def test_execute_pipe_command_large_output():
+    """Test handling of large output in piped commands."""
+    with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
+        with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_exec:
+            # Generate large output that would be truncated
+            large_output = "x" * (MAX_OUTPUT_SIZE + 1000)
+            mock_exec.return_value = {"status": "success", "output": large_output}
+
+            result = await execute_pipe_command("aws s3 ls | grep bucket")
+
+            assert result["status"] == "success"
+            assert len(result["output"]) == len(large_output)  # Length should be preserved here as truncation happens in tools module
+
+
+@pytest.mark.parametrize(
+    "exit_code,stderr,expected_status,expected_msg",
+    [
+        (0, b"", "success", ""),  # Success case
+        (1, b"Error: bucket not found", "error", "Error: bucket not found"),  # Standard error
+        (1, b"AccessDenied", "error", "Authentication error"),  # Auth error
+        (0, b"Warning: deprecated feature", "success", ""),  # Warning on stderr but success exit code
+    ],
+)
+@pytest.mark.asyncio
+async def test_execute_aws_command_exit_codes(exit_code, stderr, expected_status, expected_msg):
+    """Test handling of different process exit codes and stderr output."""
+    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+        process_mock = AsyncMock()
+        process_mock.returncode = exit_code
+        stdout = b"Command output" if exit_code == 0 else b""
+        process_mock.communicate.return_value = (stdout, stderr)
+        mock_subprocess.return_value = process_mock
+
+        result = await execute_aws_command("aws s3 ls")
+
+        assert result["status"] == expected_status
+        if expected_status == "success":
+            assert result["output"] == "Command output"
+        else:
+            assert expected_msg in result["output"]

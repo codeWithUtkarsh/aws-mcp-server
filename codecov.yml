@@ -30,9 +30,12 @@ ignore:
   # Setup and initialization files
   - "setup.py"
   - "aws_mcp_server/__main__.py"
+  - "aws_mcp_server/__init__.py"
   # Documentation files
   - "docs/**/*"
   - "*.md"
+  # Version generated file
+  - "aws_mcp_server/_version.py"
 
 comment:
   layout: "reach, diff, flags, files"

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools_scm>=8.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "aws-mcp-server"
-version = "1.0.0"
+dynamic = ["version"]
 description = "AWS Model Context Protocol Server"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -19,6 +19,7 @@ dependencies = [
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
     "moto>=4.0.0",
 ]
 lint = [
@@ -27,8 +28,15 @@ lint = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
     "ruff>=0.2.0",
     "moto>=4.0.0",
+    "setuptools_scm>=7.0.0",
+]
+# Production dependencies, optimized for Docker
+prod = [
+    "fastmcp>=0.4.1",
+    "mcp>=1.0.0",
 ]
 
 [tool.setuptools]
@@ -61,7 +69,6 @@ markers = [
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--cov=aws_mcp_server --cov-report=xml --cov-report=term"
 
 [tool.coverage.run]
 source = ["src/aws_mcp_server"]
@@ -82,3 +89,7 @@ exclude_lines = [
     "pass",
     "raise ImportError",
 ]
+
+[tool.setuptools_scm]
+# Generate version file
+version_file = "src/aws_mcp_server/_version.py"

@@ -54,17 +54,54 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install setuptools_scm
+        run: pip install setuptools_scm
+
+      - name: Generate version file and get version information
+        id: version
+        run: |
+          # Generate version file automatically 
+          python -m setuptools_scm
+          
+          # Get the raw version from setuptools_scm
+          VERSION=$(python -m setuptools_scm)
+          
+          # Make version Docker-compatible (replace + with -)
+          DOCKER_VERSION=$(echo "$VERSION" | tr '+' '-')
+          
+          # Check if we're on a tag
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            
+            # Parse semver components for tagging
+            VERSION_NO_V=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+            MAJOR=$(echo "${VERSION_NO_V}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION_NO_V}" | cut -d. -f2)
+            
+            echo "major=${MAJOR}" >> $GITHUB_OUTPUT
+            echo "major_minor=${MAJOR}.${MINOR}" >> $GITHUB_OUTPUT
+          else
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "version=${DOCKER_VERSION}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
-            type=sha,format=short,enable=${{ github.ref != format('refs/heads/{0}', 'main') }}
+            # For tags: semver tags and latest
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.is_tag == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.is_tag == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.is_tag == 'true' }}
+            type=raw,value=latest,enable=${{ steps.version.outputs.is_tag == 'true' }}
+            # For main branch: dev tag
+            type=raw,value=dev,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            # For other branches: use SHA
+            type=sha,format=short,enable=${{ github.ref != format('refs/heads/{0}', 'main') && steps.version.outputs.is_tag != 'true' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -78,5 +115,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_DATE=${{ steps.version.outputs.build_date }}
+            VERSION=${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

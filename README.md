@@ -45,14 +45,6 @@ The video demonstrates using Claude Desktop with AWS MCP Server to create a new 
 
 ## Getting Started
 
-### Installing via Smithery
-
-To install AWS MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@alexei-led/aws-mcp-server):
-
- ```bash
- npx -y @smithery/cli install @alexei-led/aws-mcp-server --client claude
- ```
-
 ### Run Server Option 1: Using Docker (Recommended)
 
 ```bash
@@ -114,7 +106,19 @@ The AWS MCP Server can be configured using environment variables:
 
 ## Integrating with Claude Desktop
 
-To integrate AWS MCP Server with Claude Desktop, you'll need to edit the Claude Desktop configuration file:
+### Option 1: Using Smithery (Easiest)
+
+The simplest way to install and configure AWS MCP Server for Claude Desktop is via [Smithery](https://smithery.ai/server/@alexei-led/aws-mcp-server):
+
+```bash
+npx -y @smithery/cli install @alexei-led/aws-mcp-server --client claude
+```
+
+This command will automatically configure Claude Desktop to use AWS MCP Server.
+
+### Option 2: Manual Configuration
+
+To manually integrate AWS MCP Server with Claude Desktop:
 
 1. **Locate the Claude Desktop configuration file**:
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -331,6 +335,33 @@ Integration tests verify AWS MCP Server works correctly with actual AWS resource
 - **Simple Updates**: Update to new versions with a single pull command
 - **No Python Environment Conflicts**: Avoids potential conflicts with other Python applications on your system
 - **Version Pinning**: Easily pin to specific versions for stability in production environments
+
+## Versioning
+
+This project uses [setuptools_scm](https://github.com/pypa/setuptools_scm) to automatically determine versions based on Git tags:
+
+- **Release versions**: When a Git tag exists (e.g., `1.2.3`), the version will be exactly that tag
+- **Development versions**: For commits without tags, a development version is generated in the format: 
+  `<last-tag>.post<commits-since-tag>+g<commit-hash>.d<date>` (e.g., `1.2.3.post10+gb697684.d20250406`)
+
+The version is automatically included in:
+- Package version information
+- Docker image labels
+- Continuous integration builds
+
+### Creating Releases
+
+To create a new release version:
+
+```bash
+# Create and push a new tag
+git tag -a 1.2.3 -m "Release version 1.2.3"
+git push origin 1.2.3
+```
+
+The CI/CD pipeline will automatically build and publish Docker images with appropriate version tags.
+
+For more detailed information about the version management system, see [VERSION.md](docs/VERSION.md).
 
 ## License
 

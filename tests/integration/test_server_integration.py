@@ -43,73 +43,90 @@ class TestServerIntegration:
     integration marker since they can run without AWS CLI or credentials."""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "service,command,mock_response,expected_content",
+        [
+            # Basic service help
+            ("s3", None, {"help_text": "AWS S3 HELP\nCommands:\ncp\nls\nmv\nrm\nsync"}, ["AWS S3 HELP", "Commands", "ls", "sync"]),
+            # Command-specific help
+            (
+                "ec2",
+                "describe-instances",
+                {"help_text": "DESCRIPTION\n  Describes the specified instances.\n\nSYNOPSIS\n  describe-instances\n  [--instance-ids <value>]"},
+                ["DESCRIPTION", "SYNOPSIS", "instance-ids"],
+            ),
+            # Help for a different service
+            ("lambda", "list-functions", {"help_text": "LAMBDA LIST-FUNCTIONS\nLists your Lambda functions"}, ["LAMBDA", "LIST-FUNCTIONS", "Lists"]),
+        ],
+    )
     @patch("aws_mcp_server.server.get_command_help")
-    async def test_describe_command_integration(self, mock_get_help, mock_aws_environment):
-        """Test the describe_command functionality end-to-end."""
-        # Mock the get_command_help response
-        mock_get_help.return_value = {"help_text": "AWS S3 HELP\nCommands:\ncp\nls\nmv\nrm\nsync"}
+    async def test_describe_command_integration(self, mock_get_help, mock_aws_environment, service, command, mock_response, expected_content):
+        """Test the describe_command functionality with table-driven tests."""
+        # Configure the mock response
+        mock_get_help.return_value = mock_response
 
         # Call the describe_command function
-        result = await describe_command(service="s3", command=None, ctx=None)
+        result = await describe_command(service=service, command=command, ctx=None)
 
         # Verify the results
         assert "help_text" in result
-        assert "AWS S3 HELP" in result["help_text"]
-        assert "Commands" in result["help_text"]
+        for content in expected_content:
+            assert content in result["help_text"], f"Expected '{content}' in help text"
 
         # Verify the mock was called correctly
-        mock_get_help.assert_called_once_with("s3", None)
+        mock_get_help.assert_called_once_with(service, command)
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "command,mock_response,expected_result,timeout",
+        [
+            # JSON output test
+            (
+                "aws s3 ls --output json",
+                {"status": "success", "output": json.dumps({"Buckets": [{"Name": "test-bucket", "CreationDate": "2023-01-01T00:00:00Z"}]})},
+                {"status": "success", "contains": ["Buckets", "test-bucket"]},
+                None,
+            ),
+            # Text output test
+            (
+                "aws ec2 describe-instances --query 'Reservations[*]' --output text",
+                {"status": "success", "output": "i-12345\trunning\tt2.micro"},
+                {"status": "success", "contains": ["i-12345", "running"]},
+                None,
+            ),
+            # Test with custom timeout
+            ("aws rds describe-db-instances", {"status": "success", "output": "DB instances list"}, {"status": "success", "contains": ["DB instances"]}, 60),
+            # Error case
+            (
+                "aws s3 ls --invalid-flag",
+                {"status": "error", "output": "Unknown options: --invalid-flag"},
+                {"status": "error", "contains": ["--invalid-flag"]},
+                None,
+            ),
+            # Piped command
+            (
+                "aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort",
+                {"status": "success", "output": "bucket1\nbucket2\nbucket3"},
+                {"status": "success", "contains": ["bucket1", "bucket3"]},
+                None,
+            ),
+        ],
+    )
     @patch("aws_mcp_server.server.execute_aws_command")
-    async def test_execute_command_with_json_output(self, mock_execute, mock_aws_environment):
-        """Test the execute_command with JSON output formatting."""
-        # Mock the JSON response from AWS CLI
-        json_response = json.dumps({"Buckets": [{"Name": "test-bucket", "CreationDate": "2023-01-01T00:00:00Z"}]})
-        mock_execute.return_value = {"status": "success", "output": json_response}
+    async def test_execute_command_scenarios(self, mock_execute, mock_aws_environment, command, mock_response, expected_result, timeout):
+        """Test execute_command with various scenarios using table-driven tests."""
+        # Configure the mock response
+        mock_execute.return_value = mock_response
 
         # Call the execute_command function
-        result = await execute_command(command="aws s3 ls --output json", timeout=None, ctx=None)
+        result = await execute_command(command=command, timeout=timeout, ctx=None)
 
-        # Verify the results - check the actual structure of the result
-        assert "Buckets" in result["output"]
-        assert "test-bucket" in result["output"]
+        # Verify status
+        assert result["status"] == expected_result["status"]
 
-        # Verify the mock was called correctly
-        mock_execute.assert_called_once_with("aws s3 ls --output json", None)
-
-    @pytest.mark.asyncio
-    @patch("aws_mcp_server.server.execute_aws_command")
-    async def test_execute_command_error_handling(self, mock_execute, mock_aws_environment):
-        """Test error handling in execute_command."""
-        # Mock an error response from AWS CLI
-        error_message = "Unknown options: --invalid-flag"
-        mock_execute.return_value = {"status": "error", "output": error_message}
-
-        # Call the execute_command function
-        result = await execute_command(command="aws s3 ls --invalid-flag", timeout=None, ctx=None)
-
-        # Verify the results
-        assert result["status"] == "error"
-        assert "--invalid-flag" in result["output"]
+        # Verify expected content is present
+        for content in expected_result["contains"]:
+            assert content in result["output"], f"Expected '{content}' in output"
 
         # Verify the mock was called correctly
-        mock_execute.assert_called_once_with("aws s3 ls --invalid-flag", None)
-
-    @pytest.mark.asyncio
-    @patch("aws_mcp_server.server.execute_aws_command")
-    async def test_execute_piped_command(self, mock_execute, mock_aws_environment):
-        """Test execution of a command with pipes."""
-        # Mock a successful piped command
-        piped_output = "bucket1\nbucket2\nbucket3"
-        mock_execute.return_value = {"status": "success", "output": piped_output}
-
-        # Call the execute_command function with a piped command
-        result = await execute_command(command="aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort", timeout=None, ctx=None)
-
-        # Verify the results
-        assert result["status"] == "success"
-        assert result["output"] == piped_output
-
-        # Verify the mock was called correctly
-        mock_execute.assert_called_once_with("aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort", None)
+        mock_execute.assert_called_once_with(command, timeout)

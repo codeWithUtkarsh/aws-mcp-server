@@ -37,46 +37,68 @@ def prompt_functions():
 
 def test_prompt_registration(prompt_functions):
     """Test that prompts are registered correctly."""
+    # All expected prompt names
+    expected_prompt_names = [
+        "create_resource",
+        "security_audit",
+        "cost_optimization",
+        "resource_inventory",
+        "troubleshoot_service",
+        "iam_policy_generator",
+        "service_monitoring",
+        "disaster_recovery",
+        "compliance_check",
+        "resource_cleanup",
+    ]
+
     # Check that we captured the expected number of functions
-    expected_prompt_count = 10  # Update this if you add more prompts
-    assert len(prompt_functions) == expected_prompt_count
+    assert len(prompt_functions) == len(expected_prompt_names), f"Expected {len(expected_prompt_names)} prompts, got {len(prompt_functions)}"
+
+    # Check that all expected prompts are registered
+    for prompt_name in expected_prompt_names:
+        assert prompt_name in prompt_functions, f"Expected prompt '{prompt_name}' not found"
 
 
-def test_create_resource_prompt(prompt_functions):
-    """Test the create_resource prompt template."""
+@pytest.mark.parametrize(
+    "prompt_name,args,expected_content",
+    [
+        # create_resource prompt
+        ("create_resource", {"resource_type": "s3-bucket", "resource_name": "my-test-bucket"}, ["s3-bucket", "my-test-bucket", "security", "best practices"]),
+        # security_audit prompt
+        ("security_audit", {"service": "s3"}, ["s3", "security audit", "public access"]),
+        # cost_optimization prompt
+        ("cost_optimization", {"service": "ec2"}, ["ec2", "cost optimization", "unused"]),
+        # resource_inventory prompt
+        ("resource_inventory", {"service": "ec2", "region": "us-west-2"}, ["ec2", "in the us-west-2 region", "inventory"]),
+        # resource_inventory with default region
+        ("resource_inventory", {"service": "s3"}, ["s3", "across all regions", "inventory"]),
+        # troubleshoot_service prompt
+        ("troubleshoot_service", {"service": "lambda", "resource_id": "my-function"}, ["lambda", "my-function", "troubleshoot"]),
+        # iam_policy_generator prompt
+        (
+            "iam_policy_generator",
+            {"service": "s3", "actions": "GetObject,PutObject", "resource_pattern": "arn:aws:s3:::my-bucket/*"},
+            ["s3", "GetObject,PutObject", "arn:aws:s3:::my-bucket/*", "least-privilege"],
+        ),
+        # service_monitoring prompt
+        ("service_monitoring", {"service": "rds", "metric_type": "performance"}, ["rds", "performance", "monitoring", "CloudWatch"]),
+        # disaster_recovery prompt
+        ("disaster_recovery", {"service": "dynamodb", "recovery_point_objective": "15 minutes"}, ["dynamodb", "15 minutes", "disaster recovery"]),
+        # compliance_check prompt
+        ("compliance_check", {"compliance_standard": "HIPAA", "service": "s3"}, ["HIPAA", "for s3", "compliance"]),
+        # resource_cleanup prompt
+        ("resource_cleanup", {"service": "ec2", "criteria": "old"}, ["ec2", "old", "cleanup"]),
+    ],
+)
+def test_prompt_templates(prompt_functions, prompt_name, args, expected_content):
+    """Test all prompt templates with various inputs using parametrized tests."""
     # Get the captured function
-    create_resource = prompt_functions.get("create_resource")
-    assert create_resource is not None, "create_resource prompt not found"
+    prompt_func = prompt_functions.get(prompt_name)
+    assert prompt_func is not None, f"{prompt_name} prompt not found"
 
-    # Test prompt output
-    prompt_text = create_resource("s3-bucket", "my-test-bucket")
-    assert "s3-bucket" in prompt_text
-    assert "my-test-bucket" in prompt_text
-    assert "security" in prompt_text.lower()
-    assert "best practices" in prompt_text.lower()
+    # Test prompt output with the specified arguments
+    prompt_text = prompt_func(**args)
 
-
-def test_security_audit_prompt(prompt_functions):
-    """Test the security_audit prompt template."""
-    # Get the captured function
-    security_audit = prompt_functions.get("security_audit")
-    assert security_audit is not None, "security_audit prompt not found"
-
-    # Test prompt output
-    prompt_text = security_audit("s3")
-    assert "s3" in prompt_text
-    assert "security audit" in prompt_text.lower()
-    assert "public access" in prompt_text.lower()
-
-
-def test_cost_optimization_prompt(prompt_functions):
-    """Test the cost_optimization prompt template."""
-    # Get the captured function
-    cost_optimization = prompt_functions.get("cost_optimization")
-    assert cost_optimization is not None, "cost_optimization prompt not found"
-
-    # Test prompt output
-    prompt_text = cost_optimization("ec2")
-    assert "ec2" in prompt_text
-    assert "cost optimization" in prompt_text.lower()
-    assert "unused" in prompt_text.lower()
+    # Check for expected content
+    for content in expected_content:
+        assert content.lower() in prompt_text.lower(), f"Expected '{content}' in {prompt_name} output"
