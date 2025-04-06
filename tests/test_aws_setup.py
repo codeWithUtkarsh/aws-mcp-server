@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -17,15 +18,23 @@ def test_aws_cli_installed():
     assert result.returncode == 0, "AWS CLI is not installed or not in PATH"
 
 
+@pytest.mark.integration
 def test_aws_credentials_exist():
-    """Test that AWS credentials exist."""
+    """Test that AWS credentials exist.
+    
+    This test is marked as integration because it requires AWS credentials.
+    """
     result = subprocess.run(["aws", "sts", "get-caller-identity"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     assert result.returncode == 0, f"AWS credentials check failed: {result.stderr.decode('utf-8')}"
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_aws_execute_command():
-    """Test that we can execute a basic AWS command."""
+    """Test that we can execute a basic AWS command.
+    
+    This test is marked as integration because it requires AWS credentials.
+    """
     # Test a simple S3 bucket listing command
     result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
 
@@ -36,10 +45,12 @@ async def test_aws_execute_command():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_aws_bucket_creation():
-    """Test that we can create and delete a bucket."""
-    # Import the required functions
-
+    """Test that we can create and delete a bucket.
+    
+    This test is marked as integration because it requires AWS credentials.
+    """
     # Generate a bucket name
     timestamp = int(time.time())
     random_id = str(uuid.uuid4())[:8]
@@ -61,3 +72,24 @@ async def test_aws_bucket_creation():
     finally:
         # Clean up - delete the bucket
         await execute_command(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+
+
+@pytest.mark.asyncio
+async def test_aws_command_mocked():
+    """Test executing an AWS command with mocked execution.
+    
+    This test is mocked so it doesn't require AWS credentials, suitable for CI.
+    """
+    with patch("aws_mcp_server.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
+        # Set up mock return value
+        mock_execute.return_value = {"status": "success", "output": "Mock bucket list output"}
+        
+        # Execute the command
+        result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
+        
+        # Verify the mock was called correctly
+        mock_execute.assert_called_once_with("aws s3 ls", None)
+        
+        # Check the results
+        assert result["status"] == "success"
+        assert "Mock bucket list output" in result["output"]
