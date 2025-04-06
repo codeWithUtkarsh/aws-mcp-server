@@ -9,6 +9,7 @@
 - Run with MCP CLI: `mcp run src/aws_mcp_server/server.py`
 - Run tests: `pytest`
 - Run single test: `pytest tests/path/to/test_file.py::test_function_name -v`
+- Run tests with coverage: `python -m pytest --cov=src/aws_mcp_server tests/`
 - Run linter: `ruff check src/ tests/`
 - Format code: `ruff format src/ tests/`
 
@@ -53,6 +54,8 @@
 - **Preserve patterns**: Follow existing code patterns when fixing bugs
 - **File size**: Keep files under 300 lines; refactor when exceeding this limit
 - **Test coverage**: Write comprehensive unit and integration tests with `pytest`; include fixtures
+- **Test structure**: Use table-driven tests with parameterization for similar test cases
+- **Mocking**: Use unittest.mock for external dependencies; don't test implementation details
 - **Modular design**: Create reusable, modular components
 - **Logging**: Implement appropriate logging levels (debug, info, error)
 - **Error handling**: Implement robust error handling for production reliability

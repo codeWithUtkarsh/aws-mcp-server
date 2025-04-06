@@ -19,6 +19,7 @@ dependencies = [
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
     "moto>=4.0.0",
 ]
 lint = [
@@ -27,6 +28,7 @@ lint = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
     "ruff>=0.2.0",
     "moto>=4.0.0",
 ]

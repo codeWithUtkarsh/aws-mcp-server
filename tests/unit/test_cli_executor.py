@@ -17,7 +17,6 @@ from aws_mcp_server.cli_executor import (
     validate_pipe_command,
 )
 from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
-from aws_mcp_server.tools import ALLOWED_UNIX_COMMANDS
 
 
 @pytest.mark.asyncio
@@ -218,7 +217,7 @@ async def test_check_aws_cli_installed(returncode, stdout, stderr, exception, ex
 
             result = await check_aws_cli_installed()
             assert result is expected_result
-            
+
             if returncode == 0:  # Only verify call args for success case to avoid redundancy
                 mock_subprocess.assert_called_once_with("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
@@ -229,24 +228,14 @@ async def test_check_aws_cli_installed(returncode, stdout, stderr, exception, ex
     [
         # Successful help retrieval with service and command
         ("s3", "ls", "return_value", {"status": "success", "output": "Help text"}, "Help text", "aws s3 ls help"),
-        
         # Successful help retrieval with service only
-        ("s3", None, "return_value", {"status": "success", "output": "Help text for service"}, 
-         "Help text for service", "aws s3 help"),
-         
+        ("s3", None, "return_value", {"status": "success", "output": "Help text for service"}, "Help text for service", "aws s3 help"),
         # Error scenarios
-        ("s3", "ls", "side_effect", CommandValidationError("Test validation error"), 
-         "Command validation error: Test validation error", None),
-         
-        ("s3", "ls", "side_effect", CommandExecutionError("Test execution error"), 
-         "Error retrieving help: Test execution error", None),
-         
-        ("s3", "ls", "side_effect", Exception("Test exception"), 
-         "Error retrieving help: Test exception", None),
-         
+        ("s3", "ls", "side_effect", CommandValidationError("Test validation error"), "Command validation error: Test validation error", None),
+        ("s3", "ls", "side_effect", CommandExecutionError("Test execution error"), "Error retrieving help: Test execution error", None),
+        ("s3", "ls", "side_effect", Exception("Test exception"), "Error retrieving help: Test exception", None),
         # Error result from AWS command
-        ("s3", "ls", "return_value", {"status": "error", "output": "Command failed"}, 
-         "Error: Command failed", "aws s3 ls help"),
+        ("s3", "ls", "return_value", {"status": "error", "output": "Command failed"}, "Error: Command failed", "aws s3 ls help"),
     ],
 )
 async def test_get_command_help(service, command, mock_type, mock_value, expected_text, expected_call):
@@ -257,13 +246,13 @@ async def test_get_command_help(service, command, mock_type, mock_value, expecte
             mock_execute.return_value = mock_value
         else:  # side_effect
             mock_execute.side_effect = mock_value
-            
+
         # Call the function
         result = await get_command_help(service, command)
-        
+
         # Verify the result
         assert expected_text in result["help_text"]
-        
+
         # Verify the mock was called correctly if expected_call is provided
         if expected_call:
             mock_execute.assert_called_once_with(expected_call)
@@ -349,6 +338,7 @@ async def test_execute_pipe_command_execution_error():
 
 # New test cases to improve coverage
 
+
 @pytest.mark.parametrize(
     "command,is_valid,is_dangerous,expected_error",
     [
@@ -358,12 +348,10 @@ async def test_execute_pipe_command_execution_error():
         ("aws s3api list-buckets --query 'Buckets[*].Name' --output json", True, False, None),
         ("aws lambda list-functions --region us-west-2", True, False, None),
         ("AWS s3 ls", True, False, None),  # Case insensitive check
-        
         # Invalid commands
         ("s3 ls", False, False, "Commands must start with 'aws'"),
         ("", False, False, "Commands must start with 'aws'"),
         ("aws", False, False, "Command must include an AWS service"),
-        
         # Dangerous commands
         ("aws iam create-user --user-name test-user", False, True, "restricted for security reasons"),
         ("aws iam create-access-key --user-name admin", False, True, "restricted for security reasons"),
@@ -383,7 +371,7 @@ def test_validate_aws_command(command, is_valid, is_dangerous, expected_error):
         # Command should fail validation
         with pytest.raises(CommandValidationError) as excinfo:
             validate_aws_command(command)
-            
+
         # Verify the correct error message was raised
         if expected_error:
             assert expected_error in str(excinfo.value)
@@ -396,9 +384,9 @@ async def test_execute_pipe_command_timeout():
         with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_exec:
             # Simulate timeout in the executed command
             mock_exec.return_value = {"status": "error", "output": f"Command timed out after {DEFAULT_TIMEOUT} seconds"}
-            
+
             result = await execute_pipe_command("aws s3 ls | grep bucket")
-            
+
             assert result["status"] == "error"
             assert f"Command timed out after {DEFAULT_TIMEOUT} seconds" in result["output"]
             mock_exec.assert_called_once()
@@ -410,10 +398,10 @@ async def test_execute_pipe_command_with_custom_timeout():
     with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
         with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = {"status": "success", "output": "Piped output"}
-            
+
             custom_timeout = 120
             await execute_pipe_command("aws s3 ls | grep bucket", timeout=custom_timeout)
-            
+
             # Verify the custom timeout was passed to the execute_piped_command
             mock_exec.assert_called_once_with("aws s3 ls | grep bucket", custom_timeout)
 
@@ -426,9 +414,9 @@ async def test_execute_pipe_command_large_output():
             # Generate large output that would be truncated
             large_output = "x" * (MAX_OUTPUT_SIZE + 1000)
             mock_exec.return_value = {"status": "success", "output": large_output}
-            
+
             result = await execute_pipe_command("aws s3 ls | grep bucket")
-            
+
             assert result["status"] == "success"
             assert len(result["output"]) == len(large_output)  # Length should be preserved here as truncation happens in tools module
 
