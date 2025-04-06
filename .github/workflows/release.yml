@@ -7,6 +7,7 @@ on:
       - main
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
     paths-ignore:
       - 'tests/**'
       - '*.md'
@@ -74,9 +75,11 @@ jobs:
             VERSION_NO_V=$(echo "${{ github.ref_name }}" | sed 's/^v//')
             MAJOR=$(echo "${VERSION_NO_V}" | cut -d. -f1)
             MINOR=$(echo "${VERSION_NO_V}" | cut -d. -f2)
+            PATCH=$(echo "${VERSION_NO_V}" | cut -d. -f3)
             
             echo "major=${MAJOR}" >> $GITHUB_OUTPUT
             echo "major_minor=${MAJOR}.${MINOR}" >> $GITHUB_OUTPUT
+            echo "major_minor_patch=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
           else
             echo "is_tag=false" >> $GITHUB_OUTPUT
           fi
@@ -92,6 +95,7 @@ jobs:
           tags: |
             # For tags: semver tags and latest
             type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.is_tag == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major_minor_patch }},enable=${{ steps.version.outputs.is_tag == 'true' }}
             type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.is_tag == 'true' }}
             type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.is_tag == 'true' }}
             type=raw,value=latest,enable=${{ steps.version.outputs.is_tag == 'true' }}
