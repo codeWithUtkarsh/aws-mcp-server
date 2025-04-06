@@ -21,7 +21,7 @@ def test_aws_cli_installed():
 @pytest.mark.integration
 def test_aws_credentials_exist():
     """Test that AWS credentials exist.
-    
+
     This test is marked as integration because it requires AWS credentials.
     """
     result = subprocess.run(["aws", "sts", "get-caller-identity"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
@@ -32,7 +32,7 @@ def test_aws_credentials_exist():
 @pytest.mark.integration
 async def test_aws_execute_command():
     """Test that we can execute a basic AWS command.
-    
+
     This test is marked as integration because it requires AWS credentials.
     """
     # Test a simple S3 bucket listing command
@@ -48,7 +48,7 @@ async def test_aws_execute_command():
 @pytest.mark.integration
 async def test_aws_bucket_creation():
     """Test that we can create and delete a bucket.
-    
+
     This test is marked as integration because it requires AWS credentials.
     """
     # Generate a bucket name
@@ -77,19 +77,19 @@ async def test_aws_bucket_creation():
 @pytest.mark.asyncio
 async def test_aws_command_mocked():
     """Test executing an AWS command with mocked execution.
-    
+
     This test is mocked so it doesn't require AWS credentials, suitable for CI.
     """
     with patch("aws_mcp_server.cli_executor.execute_aws_command", new_callable=AsyncMock) as mock_execute:
         # Set up mock return value
         mock_execute.return_value = {"status": "success", "output": "Mock bucket list output"}
-        
+
         # Execute the command
         result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
-        
+
         # Verify the mock was called correctly
         mock_execute.assert_called_once_with("aws s3 ls", None)
-        
+
         # Check the results
         assert result["status"] == "success"
         assert "Mock bucket list output" in result["output"]
