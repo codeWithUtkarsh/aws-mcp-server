@@ -71,7 +71,7 @@ VERSION := $(shell echo "$(VERSION_RAW)" | tr '+' '-')
 
 # Docker related commands
 docker-build: ## Build Docker image with proper labels and args
-	docker build --progress=plain -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
+	docker build -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
 		--build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
 		--build-arg VERSION=$(VERSION)
 
