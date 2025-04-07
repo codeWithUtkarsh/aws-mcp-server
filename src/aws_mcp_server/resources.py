@@ -60,16 +60,15 @@ def get_aws_regions() -> List[Dict[str, str]]:
     """Get available AWS regions.
 
     Uses boto3 to retrieve the list of available AWS regions.
-    Prefers using the configured AWS profile.
+    Automatically uses credentials from environment variables if no config file is available.
 
     Returns:
         List of region dictionaries with name and description
     """
     try:
-        # Create a session with the configured profile
-        session = boto3.session.Session(
-            profile_name=os.environ.get("AWS_PROFILE", "default"), region_name=os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
-        )
+        # Create a session - boto3 will automatically use credentials from
+        # environment variables if no config file is available
+        session = boto3.session.Session(region_name=os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1")))
         ec2 = session.client("ec2")
         response = ec2.describe_regions()
 
@@ -148,6 +147,7 @@ def get_aws_environment() -> Dict[str, str]:
 
     Collects information about the active AWS environment,
     including profile, region, and credential status.
+    Works with both config files and environment variables for credentials.
 
     Returns:
         Dictionary with AWS environment information
@@ -207,7 +207,7 @@ def get_aws_account_info() -> Dict[str, Optional[str]]:
     """Get information about the current AWS account.
 
     Uses STS to retrieve account ID and alias information.
-    Prefers using the configured AWS profile.
+    Automatically uses credentials from environment variables if no config file is available.
 
     Returns:
         Dictionary with AWS account information
@@ -219,10 +219,9 @@ def get_aws_account_info() -> Dict[str, Optional[str]]:
     }
 
     try:
-        # Create a session with the configured profile
-        session = boto3.session.Session(
-            profile_name=os.environ.get("AWS_PROFILE", "default"), region_name=os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
-        )
+        # Create a session - boto3 will automatically use credentials from
+        # environment variables if no config file is available
+        session = boto3.session.Session(region_name=os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1")))
 
         # Get account ID from STS
         sts = session.client("sts")
@@ -242,9 +241,18 @@ def get_aws_account_info() -> Dict[str, Optional[str]]:
             # Try to get organization info
             try:
                 org = session.client("organizations")
-                account = org.describe_account(AccountId=account_id)
-                if "Organization" in account:
-                    account_info["organization_id"] = account["Organization"]["Id"]
+                # First try to get organization info
+                try:
+                    org_response = org.describe_organization()
+                    if "OrganizationId" in org_response:
+                        account_info["organization_id"] = org_response["OrganizationId"]
+                except Exception:
+                    # Then try to get account-specific info if org-level call fails
+                    account_response = org.describe_account(AccountId=account_id)
+                    if "Account" in account_response and "Id" in account_response["Account"]:
+                        # The account ID itself isn't the organization ID, but we might
+                        # be able to extract information from other means
+                        account_info["account_id"] = account_response["Account"]["Id"]
             except Exception as e:
                 # Organizations access is often restricted, so this is expected to fail in many cases
                 logger.debug(f"Error getting organization info: {e}")
@@ -262,7 +270,7 @@ def register_resources(mcp):
     """
     logger.info("Registering AWS resources")
 
-    @mcp.resource(uri="aws://config/profiles")
+    @mcp.resource(uri="aws://config/profiles", mime_type="application/json")
     async def aws_profiles() -> dict:
         """Get available AWS profiles.
 
@@ -276,7 +284,7 @@ def register_resources(mcp):
         current_profile = os.environ.get("AWS_PROFILE", "default")
         return {"profiles": [{"name": profile, "is_current": profile == current_profile} for profile in profiles]}
 
-    @mcp.resource(uri="aws://config/regions")
+    @mcp.resource(uri="aws://config/regions", mime_type="application/json")
     async def aws_regions() -> dict:
         """Get available AWS regions.
 
@@ -299,7 +307,7 @@ def register_resources(mcp):
             ]
         }
 
-    @mcp.resource(uri="aws://config/environment")
+    @mcp.resource(uri="aws://config/environment", mime_type="application/json")
     async def aws_environment() -> dict:
         """Get AWS environment information.
 
@@ -311,7 +319,7 @@ def register_resources(mcp):
         """
         return get_aws_environment()
 
-    @mcp.resource(uri="aws://config/account")
+    @mcp.resource(uri="aws://config/account", mime_type="application/json")
     async def aws_account() -> dict:
         """Get AWS account information.
 

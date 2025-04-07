@@ -157,7 +157,7 @@ def test_get_aws_account_info(mock_session):
     # Mock API responses
     mock_sts.get_caller_identity.return_value = {"Account": "123456789012"}
     mock_iam.list_account_aliases.return_value = {"AccountAliases": ["my-account"]}
-    mock_org.describe_account.return_value = {"Organization": {"Id": "o-abcdef1234"}}
+    mock_org.describe_organization.return_value = {"OrganizationId": "o-abcdef1234"}
 
     account_info = get_aws_account_info()
 
@@ -341,8 +341,8 @@ def test_get_aws_account_info_with_org(mock_session):
     mock_sts.get_caller_identity.return_value = {"Account": "123456789012"}
     mock_iam.list_account_aliases.return_value = {"AccountAliases": ["my-account"]}
 
-    # Mock org response without Organization key
-    mock_org.describe_account.return_value = {"Account": {"Id": "123456789012"}}
+    # Mock org response for describe_organization
+    mock_org.describe_organization.return_value = {"OrganizationId": None}
 
     # Call function
     account_info = get_aws_account_info()

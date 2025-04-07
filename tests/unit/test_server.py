@@ -10,19 +10,29 @@ from aws_mcp_server.server import describe_command, execute_command, mcp, run_st
 
 def test_run_startup_checks():
     """Test the run_startup_checks function."""
+    # Create a complete mock for asyncio.run to avoid the coroutine warning
+    # We'll mock both the check_aws_cli_installed and asyncio.run
+    # This way we don't rely on any actual coroutine behavior in testing
+
     # Test when AWS CLI is installed
-    with patch("aws_mcp_server.server.asyncio.run") as mock_run:
-        mock_run.return_value = True
-        with patch("sys.exit") as mock_exit:
-            run_startup_checks()
-            mock_exit.assert_not_called()
+    with patch("aws_mcp_server.server.check_aws_cli_installed") as mock_check:
+        # Don't use the actual coroutine
+        mock_check.return_value = None  # Not used when mocking asyncio.run
+
+        with patch("aws_mcp_server.server.asyncio.run", return_value=True):
+            with patch("sys.exit") as mock_exit:
+                run_startup_checks()
+                mock_exit.assert_not_called()
 
     # Test when AWS CLI is not installed
-    with patch("aws_mcp_server.server.asyncio.run") as mock_run:
-        mock_run.return_value = False
-        with patch("sys.exit") as mock_exit:
-            run_startup_checks()
-            mock_exit.assert_called_once_with(1)
+    with patch("aws_mcp_server.server.check_aws_cli_installed") as mock_check:
+        # Don't use the actual coroutine
+        mock_check.return_value = None  # Not used when mocking asyncio.run
+
+        with patch("aws_mcp_server.server.asyncio.run", return_value=False):
+            with patch("sys.exit") as mock_exit:
+                run_startup_checks()
+                mock_exit.assert_called_once_with(1)
 
 
 @pytest.mark.asyncio
@@ -90,8 +100,8 @@ async def test_describe_command_exception_handling():
 )
 async def test_execute_command_success(command, timeout, expected_result):
     """Test the execute_command tool with successful execution."""
-    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
-    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+    # Need to patch check_aws_cli_installed to avoid the coroutine warning
+    with patch("aws_mcp_server.server.check_aws_cli_installed", return_value=None):
         # Mock the execute_aws_command function
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = expected_result
@@ -112,8 +122,8 @@ async def test_execute_command_with_context():
     """Test the execute_command tool with context."""
     mock_ctx = AsyncMock()
 
-    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
-    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+    # Need to patch check_aws_cli_installed to avoid the coroutine warning
+    with patch("aws_mcp_server.server.check_aws_cli_installed", return_value=None):
         # Test successful command with context
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = {"status": "success", "output": "Test output"}
@@ -149,8 +159,8 @@ async def test_execute_command_with_context_and_timeout():
     """Test the execute_command tool with context and timeout."""
     mock_ctx = AsyncMock()
 
-    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
-    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+    # Need to patch check_aws_cli_installed to avoid the coroutine warning
+    with patch("aws_mcp_server.server.check_aws_cli_installed", return_value=None):
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = {"status": "success", "output": "Test output"}
 
@@ -177,8 +187,8 @@ async def test_execute_command_with_context_and_timeout():
 )
 async def test_execute_command_errors(command, exception, expected_error_type, expected_message):
     """Test the execute_command tool with various error scenarios."""
-    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
-    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+    # Need to patch check_aws_cli_installed to avoid the coroutine warning
+    with patch("aws_mcp_server.server.check_aws_cli_installed", return_value=None):
         # Mock the execute_aws_command function to raise the specified exception
         with patch("aws_mcp_server.server.execute_aws_command", side_effect=exception) as mock_execute:
             # Call the tool

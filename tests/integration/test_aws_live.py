@@ -216,3 +216,29 @@ class TestAWSLiveIntegration:
 
         # Log success
         logger.info(f"Successfully executed piped command for {description}: {result['output'][:50]}...")
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_aws_account_resource(self, ensure_aws_credentials):
+        """Test that the AWS account resource returns non-null account information."""
+        # Import resources module
+        from aws_mcp_server.resources import get_aws_account_info
+
+        # Get account info directly using the function
+        account_info = get_aws_account_info()
+
+        # Verify account info is not empty
+        assert account_info is not None, "AWS account info is None"
+
+        # Verify the account_id field is not null
+        # We don't check specific values, just that they are not null when credentials are present
+        assert account_info["account_id"] is not None, "AWS account_id is null"
+
+        # Log success with masked account ID for verification (show first 4 chars)
+        account_id = account_info["account_id"]
+        masked_id = f"{account_id[:4]}{'*' * (len(account_id) - 4)}" if account_id else "None"
+        logger.info(f"Successfully accessed AWS account info with account_id: {masked_id}")
+
+        # Log organization_id status - this might be null depending on permissions
+        has_org_id = account_info["organization_id"] is not None
+        logger.info(f"Organization ID available: {has_org_id}")
