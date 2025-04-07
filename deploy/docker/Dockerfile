@@ -14,28 +14,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up working directory
 WORKDIR /build
 
-# Create version file from ARG for build environment without Git
+# Copy package definition files
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 
-# Make sure we have the version file available (VERSION arg is passed from makefile/GitHub Actions)
-# This allows builds to work without git history but with proper version
-RUN mkdir -p src/aws_mcp_server
-RUN echo '"""' > src/aws_mcp_server/_version.py && \
-    echo "Version file for Docker build" >> src/aws_mcp_server/_version.py && \
-    echo '"""' >> src/aws_mcp_server/_version.py && \
-    echo "" >> src/aws_mcp_server/_version.py && \
-    echo "__version__ = \"${VERSION}\"" >> src/aws_mcp_server/_version.py && \
-    echo "version = \"${VERSION}\"" >> src/aws_mcp_server/_version.py
+RUN cat pyproject.toml
 
-# Install plain dependencies without setuptools_scm
-RUN pip install --no-cache-dir wheel fastmcp mcp && \
-    pip wheel --no-cache-dir --wheel-dir=/wheels fastmcp mcp
+# Install package and dependencies with pip wheel
+RUN pip install --no-cache-dir wheel && \
+    pip wheel --no-cache-dir --wheel-dir=/wheels -e .
 
 # =========== FINAL STAGE ===========
 FROM --platform=${TARGETPLATFORM} python:${PYTHON_VERSION}
 
-# Set build arguments
+# Set target architecture argument
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG BUILD_DATE
@@ -97,16 +89,13 @@ RUN useradd -m -s /bin/bash -u 10001 appuser \
 
 WORKDIR /app
 
-# Copy just the source code we need
-COPY README.md LICENSE ./
+# Copy application code
+COPY pyproject.toml README.md LICENSE ./
 COPY src/ ./src/
 
-# Copy wheels and version file from builder
+# Copy wheels from builder and install
 COPY --from=builder /wheels /wheels
-COPY --from=builder /build/src/aws_mcp_server/_version.py ./src/aws_mcp_server/
-
-# Install dependencies and copy the code
-RUN pip install --no-cache-dir --no-index --find-links=/wheels fastmcp mcp && \
+RUN pip install --no-cache-dir --no-index --find-links=/wheels aws-mcp-server && \
     rm -rf /wheels
 
 # Set ownership after all files have been copied - avoid .aws directory
@@ -117,7 +106,7 @@ USER appuser
 
 # Set all environment variables in one layer
 ENV HOME="/home/appuser" \
-    PATH="/usr/local/bin:/usr/local/aws-cli/v2/bin:${PATH}" \
+    PATH="/usr/local/bin:/usr/local/aws/v2/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     AWS_MCP_TRANSPORT=stdio
 

@@ -91,9 +91,6 @@ aws_credentials
 *.local.yaml
 local_settings.py
 
-# Generated version file
-src/aws_mcp_server/_version.py
-
 # Distribution
 *.tar.gz
 *.tgz
