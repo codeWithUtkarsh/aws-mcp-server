@@ -165,8 +165,8 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
 
     # Check if the command needs a region and doesn't have one specified
     from aws_mcp_server.config import AWS_REGION
-    
-    # If it's an EC2 command and doesn't have --region 
+
+    # If it's an EC2 command and doesn't have --region
     if " ec2 " in command and " --region " not in command:
         # Add the region parameter
         command = f"{command} --region {AWS_REGION}"
@@ -242,6 +242,7 @@ async def execute_pipe_command(pipe_command: str, timeout: int | None = None) ->
 
     # Check if the first command in the pipe is an EC2 command and needs a region
     from aws_mcp_server.config import AWS_REGION
+
     commands = split_pipe_command(pipe_command)
     if commands and " ec2 " in commands[0] and " --region " not in commands[0]:
         # Add the region parameter to the first command
