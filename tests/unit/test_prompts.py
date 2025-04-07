@@ -19,7 +19,7 @@ def prompt_functions():
     captured_functions = {}
 
     # Create a special mock decorator that captures the functions
-    def mock_prompt_decorator():
+    def mock_prompt_decorator(*args, **kwargs):
         def decorator(func):
             captured_functions[func.__name__] = func
             return func

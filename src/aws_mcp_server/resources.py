@@ -376,7 +376,7 @@ def register_resources(mcp):
     """
     logger.info("Registering AWS resources")
 
-    @mcp.resource(uri="aws://config/profiles", mime_type="application/json")
+    @mcp.resource(name="aws_profiles", description="Get available AWS profiles", uri="aws://config/profiles", mime_type="application/json")
     async def aws_profiles() -> dict:
         """Get available AWS profiles.
 
@@ -390,7 +390,7 @@ def register_resources(mcp):
         current_profile = os.environ.get("AWS_PROFILE", "default")
         return {"profiles": [{"name": profile, "is_current": profile == current_profile} for profile in profiles]}
 
-    @mcp.resource(uri="aws://config/regions", mime_type="application/json")
+    @mcp.resource(name="aws_regions", description="Get available AWS regions", uri="aws://config/regions", mime_type="application/json")
     async def aws_regions() -> dict:
         """Get available AWS regions.
 
@@ -413,7 +413,12 @@ def register_resources(mcp):
             ]
         }
 
-    @mcp.resource(uri="aws://config/regions/{region}", mime_type="application/json")
+    @mcp.resource(
+        name="aws_region_details",
+        description="Get detailed information about a specific AWS region",
+        uri="aws://config/regions/{region}",
+        mime_type="application/json",
+    )
     async def aws_region_details(region: str) -> dict:
         """Get detailed information about a specific AWS region.
 
@@ -430,7 +435,7 @@ def register_resources(mcp):
         logger.info(f"Getting detailed information for region: {region}")
         return get_region_details(region)
 
-    @mcp.resource(uri="aws://config/environment", mime_type="application/json")
+    @mcp.resource(name="aws_environment", description="Get AWS environment information", uri="aws://config/environment", mime_type="application/json")
     async def aws_environment() -> dict:
         """Get AWS environment information.
 
@@ -442,7 +447,7 @@ def register_resources(mcp):
         """
         return get_aws_environment()
 
-    @mcp.resource(uri="aws://config/account", mime_type="application/json")
+    @mcp.resource(name="aws_account", description="Get AWS account information", uri="aws://config/account", mime_type="application/json")
     async def aws_account() -> dict:
         """Get AWS account information.
 

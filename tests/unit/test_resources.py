@@ -207,19 +207,26 @@ def test_register_resources():
     # Verify resource registration
     assert mock_mcp.resource.call_count == 5  # Should register 5 resources
 
-    # Check that resource was called with the correct URIs
-    expected_uris = ["aws://config/profiles", "aws://config/regions", "aws://config/regions/{region}", "aws://config/environment", "aws://config/account"]
-    called_uris = []
+    # Check that resource was called with the correct URIs, names and descriptions
+    expected_resources = [
+        {"uri": "aws://config/profiles", "name": "aws_profiles", "description": "Get available AWS profiles"},
+        {"uri": "aws://config/regions", "name": "aws_regions", "description": "Get available AWS regions"},
+        {"uri": "aws://config/regions/{region}", "name": "aws_region_details", "description": "Get detailed information about a specific AWS region"},
+        {"uri": "aws://config/environment", "name": "aws_environment", "description": "Get AWS environment information"},
+        {"uri": "aws://config/account", "name": "aws_account", "description": "Get AWS account information"},
+    ]
 
-    # Extract the URI parameter from each call
+    # Extract parameters from each call
     for call in mock_mcp.resource.call_args_list:
-        # For keyword arguments, access the 'uri' keyword
-        if "uri" in call.kwargs:
-            called_uris.append(call.kwargs["uri"])
-
-    # Verify all expected URIs were used
-    for uri in expected_uris:
-        assert uri in called_uris
+        found = False
+        for resource in expected_resources:
+            if resource["uri"] == call.kwargs.get("uri"):
+                # Check name and description too
+                assert call.kwargs.get("name") == resource["name"]
+                assert call.kwargs.get("description") == resource["description"]
+                found = True
+                break
+        assert found, f"URI {call.kwargs.get('uri')} not found in expected resources"
 
 
 def test_get_region_description():

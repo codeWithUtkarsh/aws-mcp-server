@@ -17,7 +17,7 @@ def register_prompts(mcp):
     """
     logger.info("Registering AWS prompt templates")
 
-    @mcp.prompt()
+    @mcp.prompt(name="create_resource", description="Generate AWS CLI commands to create common AWS resources with best practices")
     def create_resource(resource_type: str, resource_name: str) -> str:
         """Generate AWS CLI commands to create common AWS resources with best practices.
 
@@ -49,7 +49,7 @@ Ensure the solution includes:
 For IAM roles and policies, follow the principle of least privilege and explain any important 
 security considerations specific to this resource type."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="security_audit", description="Generate AWS CLI commands for performing a security audit on a service")
     def security_audit(service: str) -> str:
         """Generate AWS CLI commands for performing a security audit on a service.
 
@@ -77,7 +77,7 @@ Also provide:
 - A prioritized list of remediation steps with corresponding CLI commands
 - Recommendations to implement automated security checks using AWS Config Rules"""
 
-    @mcp.prompt()
+    @mcp.prompt(name="cost_optimization", description="Generate AWS CLI commands for cost optimization recommendations")
     def cost_optimization(service: str) -> str:
         """Generate AWS CLI commands for cost optimization recommendations.
 
@@ -106,7 +106,7 @@ Also provide:
 - Scripts to schedule automated start/stop for dev/test environments
 - Best practices for implementing FinOps for {service}"""
 
-    @mcp.prompt()
+    @mcp.prompt(name="resource_inventory", description="Generate AWS CLI commands to inventory resources for a service")
     def resource_inventory(service: str, region: str = "all") -> str:
         """Generate AWS CLI commands to inventory resources for a service.
 
@@ -135,7 +135,7 @@ Include commands to:
 Structure the commands to output to easily parsable formats that can be programmatically processed.
 Include jq filters to transform complex JSON output into useful summaries."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="troubleshoot_service", description="Generate AWS CLI commands for troubleshooting service issues")
     def troubleshoot_service(service: str, resource_id: str) -> str:
         """Generate AWS CLI commands for troubleshooting service issues.
 
@@ -170,7 +170,7 @@ Structure the troubleshooting as a systematic process from:
 
 Include commands to collect all relevant diagnostic information into a single report that can be shared with AWS Support if needed."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="iam_policy_generator", description="Generate least-privilege IAM policies for specific services and actions")
     def iam_policy_generator(service: str, actions: str, resource_pattern: str = "*") -> str:
         """Generate least-privilege IAM policies for specific services and actions.
 
@@ -202,7 +202,7 @@ Also provide:
 - Explanation of potential security impact if permissions are too broad
 - Alternative permissions strategies if applicable (e.g., attribute-based access control)"""
 
-    @mcp.prompt()
+    @mcp.prompt(name="service_monitoring", description="Generate AWS CLI commands to set up monitoring for a service")
     def service_monitoring(service: str, metric_type: str = "performance") -> str:
         """Generate AWS CLI commands to set up monitoring for a service.
 
@@ -235,7 +235,7 @@ The monitoring solution should include:
 
 Ensure the commands follow operational excellence best practices from the Well-Architected Framework."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="disaster_recovery", description="Generate AWS CLI commands to implement disaster recovery for a service")
     def disaster_recovery(service: str, recovery_point_objective: str = "1 hour") -> str:
         """Generate AWS CLI commands to implement disaster recovery for a service.
 
@@ -267,7 +267,7 @@ The solution should:
 - Consider regional service availability differences
 - Include both data and configuration recovery"""
 
-    @mcp.prompt()
+    @mcp.prompt(name="compliance_check", description="Generate AWS CLI commands to check compliance with standards")
     def compliance_check(compliance_standard: str, service: str = "all") -> str:
         """Generate AWS CLI commands to check compliance with standards.
 
@@ -300,7 +300,7 @@ Also provide:
 - Instructions to set up continuous compliance monitoring
 - Best practices for maintaining ongoing compliance"""
 
-    @mcp.prompt()
+    @mcp.prompt(name="resource_cleanup", description="Generate AWS CLI commands to identify and cleanup unused resources")
     def resource_cleanup(service: str, criteria: str = "unused") -> str:
         """Generate AWS CLI commands to identify and cleanup unused resources.
 
@@ -334,7 +334,7 @@ The commands should include:
 
 Follow AWS operational best practices and include error handling."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="serverless_deployment", description="Generate AWS CLI commands to deploy a serverless application")
     def serverless_deployment(application_name: str, runtime: str = "python3.13") -> str:
         """Generate AWS CLI commands to deploy a serverless application.
 
@@ -369,7 +369,7 @@ The deployment should follow serverless best practices:
 
 Include commands to verify the deployment and test the application endpoints."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="container_orchestration", description="Generate AWS CLI commands to set up container orchestration")
     def container_orchestration(cluster_name: str, service_type: str = "fargate") -> str:
         """Generate AWS CLI commands to set up container orchestration.
 
@@ -405,7 +405,7 @@ The commands should address:
 
 Include validation commands to verify successful deployment and access."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="vpc_network_design", description="Generate AWS CLI commands to design and deploy a secure VPC")
     def vpc_network_design(vpc_name: str, cidr_block: str = "10.0.0.0/16") -> str:
         """Generate AWS CLI commands to design and deploy a secure VPC.
 
@@ -441,7 +441,7 @@ The VPC design should include:
 
 Include validation commands to verify the network connectivity and security."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="infrastructure_automation", description="Generate AWS CLI commands for infrastructure automation")
     def infrastructure_automation(resource_type: str, automation_scope: str = "deployment") -> str:
         """Generate AWS CLI commands for infrastructure automation.
 
@@ -477,7 +477,7 @@ The automation solution should:
 
 Include commands to validate the automation and test it in a controlled environment."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="security_posture_assessment", description="Generate AWS CLI commands for comprehensive security posture assessment")
     def security_posture_assessment() -> str:
         """Generate AWS CLI commands for comprehensive security posture assessment.
 
@@ -510,7 +510,7 @@ The assessment should check for:
 Include commands to generate comprehensive reports of findings organized by severity,
 and provide remediation steps for common security issues."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="performance_tuning", description="Generate AWS CLI commands for performance tuning of AWS resources")
     def performance_tuning(service: str, resource_id: str) -> str:
         """Generate AWS CLI commands for performance tuning of AWS resources.
 
@@ -545,7 +545,7 @@ The performance tuning approach should:
 
 Include commands to verify performance improvements and monitor for regressions."""
 
-    @mcp.prompt()
+    @mcp.prompt(name="multi_account_governance", description="Generate AWS CLI commands to implement multi-account governance")
     def multi_account_governance(account_type: str = "organization") -> str:
         """Generate AWS CLI commands to implement multi-account governance.
 
