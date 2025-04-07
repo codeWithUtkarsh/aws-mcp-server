@@ -12,6 +12,7 @@ import sys
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 
+from aws_mcp_server import __version__
 from aws_mcp_server.cli_executor import (
     CommandExecutionError,
     CommandHelpResult,
@@ -21,7 +22,7 @@ from aws_mcp_server.cli_executor import (
     execute_aws_command,
     get_command_help,
 )
-from aws_mcp_server.config import INSTRUCTIONS, SERVER_INFO
+from aws_mcp_server.config import INSTRUCTIONS
 from aws_mcp_server.prompts import register_prompts
 from aws_mcp_server.resources import register_resources
 
@@ -47,7 +48,7 @@ run_startup_checks()
 mcp = FastMCP(
     "AWS MCP Server",
     instructions=INSTRUCTIONS,
-    version=SERVER_INFO["version"],
+    version=__version__,
     capabilities={"resources": {}},  # Enable resources capability
 )
 
