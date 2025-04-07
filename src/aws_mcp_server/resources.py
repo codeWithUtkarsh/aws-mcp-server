@@ -8,7 +8,7 @@ import configparser
 import logging
 import os
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
@@ -140,6 +140,115 @@ def _get_region_description(region_code: str) -> str:
     }
 
     return region_map.get(region_code, f"AWS Region {region_code}")
+
+
+def _get_region_geographic_location(region_code: str) -> Dict[str, str]:
+    """Get geographic location information for a region.
+
+    Args:
+        region_code: AWS region code (e.g., us-east-1)
+
+    Returns:
+        Dictionary with geographic information
+    """
+    # Map of region codes to geographic information
+    geo_map = {
+        "us-east-1": {"continent": "North America", "country": "United States", "city": "Ashburn, Virginia"},
+        "us-east-2": {"continent": "North America", "country": "United States", "city": "Columbus, Ohio"},
+        "us-west-1": {"continent": "North America", "country": "United States", "city": "San Francisco, California"},
+        "us-west-2": {"continent": "North America", "country": "United States", "city": "Portland, Oregon"},
+        "af-south-1": {"continent": "Africa", "country": "South Africa", "city": "Cape Town"},
+        "ap-east-1": {"continent": "Asia", "country": "China", "city": "Hong Kong"},
+        "ap-south-1": {"continent": "Asia", "country": "India", "city": "Mumbai"},
+        "ap-northeast-1": {"continent": "Asia", "country": "Japan", "city": "Tokyo"},
+        "ap-northeast-2": {"continent": "Asia", "country": "South Korea", "city": "Seoul"},
+        "ap-northeast-3": {"continent": "Asia", "country": "Japan", "city": "Osaka"},
+        "ap-southeast-1": {"continent": "Asia", "country": "Singapore", "city": "Singapore"},
+        "ap-southeast-2": {"continent": "Oceania", "country": "Australia", "city": "Sydney"},
+        "ap-southeast-3": {"continent": "Asia", "country": "Indonesia", "city": "Jakarta"},
+        "ca-central-1": {"continent": "North America", "country": "Canada", "city": "Montreal"},
+        "eu-central-1": {"continent": "Europe", "country": "Germany", "city": "Frankfurt"},
+        "eu-west-1": {"continent": "Europe", "country": "Ireland", "city": "Dublin"},
+        "eu-west-2": {"continent": "Europe", "country": "United Kingdom", "city": "London"},
+        "eu-west-3": {"continent": "Europe", "country": "France", "city": "Paris"},
+        "eu-north-1": {"continent": "Europe", "country": "Sweden", "city": "Stockholm"},
+        "eu-south-1": {"continent": "Europe", "country": "Italy", "city": "Milan"},
+        "me-south-1": {"continent": "Middle East", "country": "Bahrain", "city": "Manama"},
+        "sa-east-1": {"continent": "South America", "country": "Brazil", "city": "São Paulo"},
+    }
+
+    # Return default information if region not found
+    default_geo = {"continent": "Unknown", "country": "Unknown", "city": "Unknown"}
+    return geo_map.get(region_code, default_geo)
+
+
+def get_region_details(region_code: str) -> Dict[str, Any]:
+    """Get detailed information about a specific AWS region.
+
+    Args:
+        region_code: AWS region code (e.g., us-east-1)
+
+    Returns:
+        Dictionary with region details
+    """
+    region_info = {
+        "code": region_code,
+        "name": _get_region_description(region_code),
+        "geographic_location": _get_region_geographic_location(region_code),
+        "availability_zones": [],
+        "services": [],
+        "is_current": region_code == os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1")),
+    }
+
+    try:
+        # Create a session with the specified region
+        session = boto3.session.Session(region_name=region_code)
+        
+        # Get availability zones
+        try:
+            ec2 = session.client("ec2", region_name=region_code)
+            response = ec2.describe_availability_zones(
+                Filters=[{"Name": "region-name", "Values": [region_code]}]
+            )
+            
+            azs = []
+            for az in response.get("AvailabilityZones", []):
+                azs.append({
+                    "name": az.get("ZoneName", ""),
+                    "state": az.get("State", ""),
+                    "zone_id": az.get("ZoneId", ""),
+                    "zone_type": az.get("ZoneType", ""),
+                })
+            
+            region_info["availability_zones"] = azs
+        except Exception as e:
+            logger.debug(f"Error fetching availability zones for {region_code}: {e}")
+        
+        # Try to get available services in the region
+        # This is challenging as there's no direct AWS API for this,
+        # so we'll use a subset of common services to check availability
+        common_services = [
+            "ec2", "s3", "lambda", "rds", "dynamodb", "cloudformation",
+            "sqs", "sns", "iam", "cloudwatch", "kinesis", "apigateway"
+        ]
+        
+        available_services = []
+        for service_name in common_services:
+            try:
+                # Try to create a client for the service in the region
+                # If it succeeds, the service is available
+                session.client(service_name, region_name=region_code)
+                available_services.append(service_name)
+            except Exception:
+                # If client creation fails, the service might not be available in this region
+                pass
+        
+        region_info["services"] = available_services
+        
+    except Exception as e:
+        logger.warning(f"Error fetching region details for {region_code}: {e}")
+    
+    return region_info
 
 
 def get_aws_environment() -> Dict[str, str]:
@@ -306,6 +415,23 @@ def register_resources(mcp):
                 for region in regions
             ]
         }
+    
+    @mcp.resource(uri="aws://config/regions/{region}", mime_type="application/json")
+    async def aws_region_details(region: str) -> dict:
+        """Get detailed information about a specific AWS region.
+
+        Retrieves detailed information about a specific AWS region,
+        including its name, code, availability zones, geographic location,
+        and available services.
+
+        Args:
+            region: AWS region code (e.g., us-east-1)
+
+        Returns:
+            Dictionary with detailed region information
+        """
+        logger.info(f"Getting detailed information for region: {region}")
+        return get_region_details(region)
 
     @mcp.resource(uri="aws://config/environment", mime_type="application/json")
     async def aws_environment() -> dict:

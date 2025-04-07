@@ -38,6 +38,8 @@ AWS MCP Server provides a simple interface to the AWS CLI.
 - Access AWS environment resources for context:
   - aws://config/profiles: List available AWS profiles and active profile
   - aws://config/regions: List available AWS regions and active region
+  - aws://config/regions/{region}: Get detailed information about a specific region 
+    including name, code, availability zones, geographic location, and available services
   - aws://config/environment: Get current AWS environment details (profile, region, credentials)
   - aws://config/account: Get current AWS account information (ID, alias, organization)
 - Use the built-in prompt templates for common AWS tasks following best practices:
