@@ -3,11 +3,12 @@
 This module contains configuration settings for the AWS MCP Server.
 
 Environment variables:
-- AWS_MCP_TIMEOUT: Custom timeout in seconds (default: 30)
-- AWS_MCP_MAX_OUTPUT: Maximum output size in characters (default: 10000)
+- AWS_MCP_TIMEOUT: Custom timeout in seconds (default: 300)
+- AWS_MCP_MAX_OUTPUT: Maximum output size in characters (default: 100000)
 - AWS_MCP_TRANSPORT: Transport protocol to use ("stdio" or "sse", default: "stdio")
 - AWS_PROFILE: AWS profile to use (default: "default")
 - AWS_REGION: AWS region to use (default: "us-east-1")
+- AWS_DEFAULT_REGION: Alternative to AWS_REGION (used if AWS_REGION not set)
 """
 
 import os
@@ -25,7 +26,7 @@ TRANSPORT = os.environ.get("AWS_MCP_TRANSPORT", "stdio")
 
 # AWS CLI settings
 AWS_PROFILE = os.environ.get("AWS_PROFILE", "default")
-AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
 
 # Instructions displayed to client during initialization
 INSTRUCTIONS = """
@@ -34,6 +35,11 @@ AWS MCP Server provides a simple interface to the AWS CLI.
 - Use the execute_command tool to run AWS CLI commands
 - The execute_command tool supports Unix pipes (|) to filter or transform AWS CLI output:
   Example: aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort
+- Access AWS environment resources for context:
+  - aws://config/profiles: List available AWS profiles and active profile
+  - aws://config/regions: List available AWS regions and active region
+  - aws://config/environment: Get current AWS environment details (profile, region, credentials)
+  - aws://config/account: Get current AWS account information (ID, alias, organization)
 - Use the built-in prompt templates for common AWS tasks following best practices:
   - create_resource: Create AWS resources with proper security settings
   - security_audit: Perform comprehensive service security audits

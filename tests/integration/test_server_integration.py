@@ -130,3 +130,66 @@ class TestServerIntegration:
 
         # Verify the mock was called correctly
         mock_execute.assert_called_once_with(command, timeout)
+
+    @pytest.mark.asyncio
+    @patch("aws_mcp_server.resources.get_aws_profiles")
+    @patch("aws_mcp_server.resources.get_aws_regions")
+    @patch("aws_mcp_server.resources.get_aws_environment")
+    @patch("aws_mcp_server.resources.get_aws_account_info")
+    async def test_mcp_resources_access(
+        self, mock_get_aws_account_info, mock_get_aws_environment, mock_get_aws_regions, mock_get_aws_profiles, mock_aws_environment, mcp_client
+    ):
+        """Test that MCP resources are properly registered and accessible to clients."""
+        # Set up mock return values
+        mock_get_aws_profiles.return_value = ["default", "test-profile", "dev"]
+        mock_get_aws_regions.return_value = [
+            {"RegionName": "us-east-1", "RegionDescription": "US East (N. Virginia)"},
+            {"RegionName": "us-west-2", "RegionDescription": "US West (Oregon)"},
+        ]
+        mock_get_aws_environment.return_value = {
+            "aws_profile": "test-profile",
+            "aws_region": "us-west-2",
+            "has_credentials": True,
+            "credentials_source": "profile",
+        }
+        mock_get_aws_account_info.return_value = {
+            "account_id": "123456789012",
+            "account_alias": "test-account",
+            "organization_id": "o-abcdef123456",
+        }
+
+        # Define the expected resource URIs
+        expected_resources = ["aws://config/profiles", "aws://config/regions", "aws://config/environment", "aws://config/account"]
+
+        # Test that resources are accessible through MCP client
+        resources = await mcp_client.resources_list()
+
+        # Verify all expected resources are present
+        resource_uris = [r.uri for r in resources.resources]
+        for uri in expected_resources:
+            assert uri in resource_uris, f"Resource {uri} not found in resources list"
+
+        # Test accessing each resource by URI
+        for uri in expected_resources:
+            resource = await mcp_client.resources_read(uri=uri)
+            assert resource is not None, f"Failed to read resource {uri}"
+
+            # Verify specific resource content
+            if uri == "aws_profiles":
+                assert "profiles" in resource.content
+                assert len(resource.content["profiles"]) == 3
+                assert any(p["name"] == "test-profile" and p["is_current"] for p in resource.content["profiles"])
+
+            elif uri == "aws_regions":
+                assert "regions" in resource.content
+                assert len(resource.content["regions"]) == 2
+                assert any(r["name"] == "us-west-2" and r["is_current"] for r in resource.content["regions"])
+
+            elif uri == "aws_environment":
+                assert resource.content["aws_profile"] == "test-profile"
+                assert resource.content["aws_region"] == "us-west-2"
+                assert resource.content["has_credentials"] is True
+
+            elif uri == "aws_account":
+                assert resource.content["account_id"] == "123456789012"
+                assert resource.content["account_alias"] == "test-account"

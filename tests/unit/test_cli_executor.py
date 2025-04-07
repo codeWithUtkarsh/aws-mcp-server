@@ -64,13 +64,18 @@ async def test_execute_aws_command_error():
         # Mock a failed process
         process_mock = AsyncMock()
         process_mock.returncode = 1
-        process_mock.communicate.return_value = (b"", b"Error message")
+        # Set up an awaitable communicate method
+        communicate_mock = AsyncMock()
+        communicate_mock.return_value = (b"", b"Error message")
+        process_mock.communicate = communicate_mock
         mock_subprocess.return_value = process_mock
 
         result = await execute_aws_command("aws s3 ls")
 
         assert result["status"] == "error"
         assert result["output"] == "Error message"
+        # Verify communicate was called
+        communicate_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -124,10 +129,9 @@ async def test_execute_aws_command_kill_failure():
         # Use a properly awaitable mock that raises TimeoutError
         communicate_mock = AsyncMock(side_effect=asyncio.TimeoutError())
         process_mock.communicate = communicate_mock
-        mock_subprocess.return_value = process_mock
-
-        # Mock process.kill to raise an exception
+        # Use regular MagicMock since kill() is not an async method
         process_mock.kill = MagicMock(side_effect=Exception("Failed to kill process"))
+        mock_subprocess.return_value = process_mock
 
         with pytest.raises(CommandExecutionError) as excinfo:
             await execute_aws_command("aws s3 ls", timeout=1)

@@ -1,7 +1,7 @@
 """Unit tests for the tools module."""
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -113,7 +113,8 @@ async def test_execute_piped_command_timeout():
         # Use a properly awaitable mock that raises TimeoutError
         communicate_mock = AsyncMock(side_effect=asyncio.TimeoutError())
         process_mock.communicate = communicate_mock
-        process_mock.kill = AsyncMock()
+        # Use regular MagicMock since kill() is not an async method
+        process_mock.kill = MagicMock()
         mock_subprocess.return_value = process_mock
 
         result = await execute_piped_command("aws s3 ls | grep bucket", timeout=1)

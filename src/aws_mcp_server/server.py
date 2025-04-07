@@ -2,6 +2,7 @@
 
 This module defines the MCP server instance and tool functions for AWS CLI interaction,
 providing a standardized interface for AWS CLI command execution and documentation.
+It also provides MCP Resources for AWS profiles, regions, and configuration.
 """
 
 import asyncio
@@ -22,6 +23,7 @@ from aws_mcp_server.cli_executor import (
 )
 from aws_mcp_server.config import INSTRUCTIONS, SERVER_INFO
 from aws_mcp_server.prompts import register_prompts
+from aws_mcp_server.resources import register_resources
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stderr)])
@@ -46,10 +48,14 @@ mcp = FastMCP(
     "AWS MCP Server",
     instructions=INSTRUCTIONS,
     version=SERVER_INFO["version"],
+    capabilities={"resources": {}},  # Enable resources capability
 )
 
 # Register prompt templates
 register_prompts(mcp)
+
+# Register AWS resources
+register_resources(mcp)
 
 
 @mcp.tool()

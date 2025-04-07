@@ -41,7 +41,9 @@ class TestAWSLiveIntegration:
         [
             ("s3", None, ["description", "ls", "cp", "mv"]),
             ("ec2", None, ["description", "run-instances", "describe-instances"]),
-            ("s3", "ls", ["synopsis", "path", "options"]),
+            # The AWS CLI outputs help with control characters that complicate exact matching
+            # We need to use content that will be in the help text even with the escape characters
+            ("s3", "ls", ["list s3 objects", "options", "examples"]),
         ],
     )
     async def test_describe_command(self, ensure_aws_credentials, service, command, expected_content):

@@ -163,6 +163,15 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
     if timeout is None:
         timeout = DEFAULT_TIMEOUT
 
+    # Check if the command needs a region and doesn't have one specified
+    from aws_mcp_server.config import AWS_REGION
+    
+    # If it's an EC2 command and doesn't have --region 
+    if " ec2 " in command and " --region " not in command:
+        # Add the region parameter
+        command = f"{command} --region {AWS_REGION}"
+        logger.debug(f"Added region to command: {command}")
+
     logger.debug(f"Executing AWS command: {command}")
 
     try:
@@ -176,7 +185,7 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         except asyncio.TimeoutError as timeout_error:
             logger.warning(f"Command timed out after {timeout} seconds: {command}")
             try:
-                # Use synchronous kill to avoid coroutine issues in tests
+                # process.kill() is synchronous, not a coroutine
                 process.kill()
             except Exception as e:
                 logger.error(f"Error killing process: {e}")
@@ -230,6 +239,16 @@ async def execute_pipe_command(pipe_command: str, timeout: int | None = None) ->
         validate_pipe_command(pipe_command)
     except CommandValidationError as e:
         raise CommandValidationError(f"Invalid pipe command: {str(e)}") from e
+
+    # Check if the first command in the pipe is an EC2 command and needs a region
+    from aws_mcp_server.config import AWS_REGION
+    commands = split_pipe_command(pipe_command)
+    if commands and " ec2 " in commands[0] and " --region " not in commands[0]:
+        # Add the region parameter to the first command
+        commands[0] = f"{commands[0]} --region {AWS_REGION}"
+        # Rebuild the pipe command
+        pipe_command = " | ".join(commands)
+        logger.debug(f"Added region to piped command: {pipe_command}")
 
     logger.debug(f"Executing piped command: {pipe_command}")
 

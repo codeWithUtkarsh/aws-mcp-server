@@ -11,28 +11,18 @@ from aws_mcp_server.server import describe_command, execute_command, mcp, run_st
 def test_run_startup_checks():
     """Test the run_startup_checks function."""
     # Test when AWS CLI is installed
-    with patch("aws_mcp_server.server.check_aws_cli_installed") as mock_check:
-        # Return a Future-like object that resolves to True
-        future_true = AsyncMock()
-        future_true.__await__ = lambda: (yield True)
-        mock_check.return_value = future_true
-
-        with patch("asyncio.run", lambda x: True):
-            with patch("sys.exit") as mock_exit:
-                run_startup_checks()
-                mock_exit.assert_not_called()
+    with patch("aws_mcp_server.server.asyncio.run") as mock_run:
+        mock_run.return_value = True
+        with patch("sys.exit") as mock_exit:
+            run_startup_checks()
+            mock_exit.assert_not_called()
 
     # Test when AWS CLI is not installed
-    with patch("aws_mcp_server.server.check_aws_cli_installed") as mock_check:
-        # Return a Future-like object that resolves to False
-        future_false = AsyncMock()
-        future_false.__await__ = lambda: (yield False)
-        mock_check.return_value = future_false
-
-        with patch("asyncio.run", lambda x: False):
-            with patch("sys.exit") as mock_exit:
-                run_startup_checks()
-                mock_exit.assert_called_once_with(1)
+    with patch("aws_mcp_server.server.asyncio.run") as mock_run:
+        mock_run.return_value = False
+        with patch("sys.exit") as mock_exit:
+            run_startup_checks()
+            mock_exit.assert_called_once_with(1)
 
 
 @pytest.mark.asyncio
@@ -100,19 +90,21 @@ async def test_describe_command_exception_handling():
 )
 async def test_execute_command_success(command, timeout, expected_result):
     """Test the execute_command tool with successful execution."""
-    # Mock the execute_aws_command function
-    with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = expected_result
+    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
+    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+        # Mock the execute_aws_command function
+        with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
+            mock_execute.return_value = expected_result
 
-        # Call the execute_command function
-        result = await execute_command(command=command, timeout=timeout)
+            # Call the execute_command function
+            result = await execute_command(command=command, timeout=timeout)
 
-        # Verify the result
-        assert result["status"] == expected_result["status"]
-        assert result["output"] == expected_result["output"]
+            # Verify the result
+            assert result["status"] == expected_result["status"]
+            assert result["output"] == expected_result["output"]
 
-        # Verify the correct arguments were passed to the mocked function
-        mock_execute.assert_called_with(command, timeout if timeout else ANY)
+            # Verify the correct arguments were passed to the mocked function
+            mock_execute.assert_called_with(command, timeout if timeout else ANY)
 
 
 @pytest.mark.asyncio
@@ -120,34 +112,36 @@ async def test_execute_command_with_context():
     """Test the execute_command tool with context."""
     mock_ctx = AsyncMock()
 
-    # Test successful command with context
-    with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "success", "output": "Test output"}
+    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
+    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+        # Test successful command with context
+        with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
+            mock_execute.return_value = {"status": "success", "output": "Test output"}
 
-        result = await execute_command(command="aws s3 ls", ctx=mock_ctx)
+            result = await execute_command(command="aws s3 ls", ctx=mock_ctx)
 
-        assert result["status"] == "success"
-        assert result["output"] == "Test output"
+            assert result["status"] == "success"
+            assert result["output"] == "Test output"
 
-        # Verify context was used correctly
-        assert mock_ctx.info.call_count == 2
-        assert "Executing AWS CLI command" in mock_ctx.info.call_args_list[0][0][0]
-        assert "Command executed successfully" in mock_ctx.info.call_args_list[1][0][0]
+            # Verify context was used correctly
+            assert mock_ctx.info.call_count == 2
+            assert "Executing AWS CLI command" in mock_ctx.info.call_args_list[0][0][0]
+            assert "Command executed successfully" in mock_ctx.info.call_args_list[1][0][0]
 
-    # Test failed command with context
-    mock_ctx.reset_mock()
-    with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "error", "output": "Error output"}
+        # Test failed command with context
+        mock_ctx.reset_mock()
+        with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
+            mock_execute.return_value = {"status": "error", "output": "Error output"}
 
-        result = await execute_command(command="aws s3 ls", ctx=mock_ctx)
+            result = await execute_command(command="aws s3 ls", ctx=mock_ctx)
 
-        assert result["status"] == "error"
-        assert result["output"] == "Error output"
+            assert result["status"] == "error"
+            assert result["output"] == "Error output"
 
-        # Verify context was used correctly
-        assert mock_ctx.info.call_count == 1
-        assert mock_ctx.warning.call_count == 1
-        assert "Command failed" in mock_ctx.warning.call_args[0][0]
+            # Verify context was used correctly
+            assert mock_ctx.info.call_count == 1
+            assert mock_ctx.warning.call_count == 1
+            assert "Command failed" in mock_ctx.warning.call_args[0][0]
 
 
 @pytest.mark.asyncio
@@ -155,14 +149,16 @@ async def test_execute_command_with_context_and_timeout():
     """Test the execute_command tool with context and timeout."""
     mock_ctx = AsyncMock()
 
-    with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
-        mock_execute.return_value = {"status": "success", "output": "Test output"}
+    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
+    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+        with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
+            mock_execute.return_value = {"status": "success", "output": "Test output"}
 
-        await execute_command(command="aws s3 ls", timeout=60, ctx=mock_ctx)
+            await execute_command(command="aws s3 ls", timeout=60, ctx=mock_ctx)
 
-        # Verify timeout was mentioned in the context message
-        message = mock_ctx.info.call_args_list[0][0][0]
-        assert "with timeout: 60s" in message
+            # Verify timeout was mentioned in the context message
+            message = mock_ctx.info.call_args_list[0][0][0]
+            assert "with timeout: 60s" in message
 
 
 @pytest.mark.asyncio
@@ -181,18 +177,20 @@ async def test_execute_command_with_context_and_timeout():
 )
 async def test_execute_command_errors(command, exception, expected_error_type, expected_message):
     """Test the execute_command tool with various error scenarios."""
-    # Mock the execute_aws_command function to raise the specified exception
-    with patch("aws_mcp_server.server.execute_aws_command", side_effect=exception) as mock_execute:
-        # Call the tool
-        result = await execute_command(command=command)
+    # Need to patch check_aws_cli_installed which causes a warning due to unawaited coroutine
+    with patch("aws_mcp_server.server.check_aws_cli_installed"):
+        # Mock the execute_aws_command function to raise the specified exception
+        with patch("aws_mcp_server.server.execute_aws_command", side_effect=exception) as mock_execute:
+            # Call the tool
+            result = await execute_command(command=command)
 
-        # Verify error status and message
-        assert result["status"] == "error"
-        assert expected_error_type in result["output"]
-        assert expected_message in result["output"]
+            # Verify error status and message
+            assert result["status"] == "error"
+            assert expected_error_type in result["output"]
+            assert expected_message in result["output"]
 
-        # Verify the command was called correctly
-        mock_execute.assert_called_with(command, ANY)
+            # Verify the command was called correctly
+            mock_execute.assert_called_with(command, ANY)
 
 
 @pytest.mark.asyncio

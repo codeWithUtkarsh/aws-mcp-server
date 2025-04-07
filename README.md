@@ -259,24 +259,39 @@ The AWS MCP Server includes the following pre-defined prompt templates:
 ### Setting Up the Development Environment
 
 ```bash
-# Install only runtime dependencies
+# Install only runtime dependencies using pip
 pip install -e .
 
-# Install all development dependencies
+# Install all development dependencies using pip
 pip install -e ".[dev]"
 
-# Run unit tests
-pytest -k "not integration"
-
-# Run tests with coverage report
-pytest -k "not integration" --cov-report=html
-
-# Run linting
-ruff check src/ tests/
-
-# Run formatting
-ruff format src/ tests/
+# Or use uv for faster dependency management
+make uv-install       # Install runtime dependencies
+make uv-dev-install   # Install development dependencies
 ```
+
+### Makefile Commands
+
+The project includes a Makefile with various targets for common tasks:
+
+```bash
+# Test commands
+make test             # Run tests excluding integration tests
+make test-unit        # Run unit tests only (all tests except integration tests)
+make test-integration # Run integration tests only (requires AWS credentials)
+make test-all         # Run all tests including integration tests
+
+# Test coverage commands
+make test-coverage    # Run tests with coverage report (excluding integration tests)
+make test-coverage-all # Run all tests with coverage report (including integration tests)
+
+# Linting and formatting
+make lint             # Run linters (ruff check and format --check)
+make lint-fix         # Run linters and auto-fix issues where possible
+make format           # Format code with ruff
+```
+
+For a complete list of available commands, run `make help`.
 
 ### Code Coverage
 
@@ -300,11 +315,20 @@ Integration tests verify AWS MCP Server works correctly with actual AWS resource
 2. **Run integration tests**:
    ```bash
    # Run all tests including integration tests
-   pytest --run-integration
+   make test-all
    
    # Run only integration tests
-   pytest --run-integration -m integration
+   make test-integration
    ```
+
+Or you can run the pytest commands directly:
+```bash
+# Run all tests including integration tests
+pytest --run-integration
+
+# Run only integration tests
+pytest --run-integration -m integration
+```
 
 ## Troubleshooting
 
