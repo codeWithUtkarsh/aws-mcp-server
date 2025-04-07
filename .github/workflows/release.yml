@@ -59,7 +59,7 @@ jobs:
         id: version
         run: |
           # Generate version file automatically 
-          python -m setuptools_scm
+          VERSION=$(python -m setuptools_scm)
           
           # Check if we're on a tag
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
@@ -67,6 +67,8 @@ jobs:
             
             # Parse semver components for tagging
             VERSION_NO_V=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+            # overwrite VERSION with the tag name
+            VERSION=${VERSION_NO_V}
             MAJOR=$(echo "${VERSION_NO_V}" | cut -d. -f1)
             MINOR=$(echo "${VERSION_NO_V}" | cut -d. -f2)
             PATCH=$(echo "${VERSION_NO_V}" | cut -d. -f3)
