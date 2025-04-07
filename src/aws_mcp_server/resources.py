@@ -142,6 +142,98 @@ def _get_region_description(region_code: str) -> str:
     return region_map.get(region_code, f"AWS Region {region_code}")
 
 
+def get_region_available_services(session: boto3.session.Session, region_code: str) -> List[Dict[str, str]]:
+    """Get available AWS services for a specific region.
+
+    Uses the Service Quotas API to get a comprehensive list of services available
+    in the given region. Falls back to testing client creation for common services
+    if the Service Quotas API fails.
+
+    Args:
+        session: Boto3 session to use for API calls
+        region_code: AWS region code (e.g., us-east-1)
+
+    Returns:
+        List of dictionaries with service ID and name
+    """
+    available_services = []
+    try:
+        # Create a Service Quotas client
+        quotas_client = session.client("service-quotas", region_name=region_code)
+
+        # List all services available in the region
+        next_token = None
+        while True:
+            if next_token:
+                response = quotas_client.list_services(NextToken=next_token)
+            else:
+                response = quotas_client.list_services()
+
+            # Extract service codes
+            for service in response.get("Services", []):
+                service_code = service.get("ServiceCode")
+                if service_code:
+                    # Convert ServiceQuota service codes to boto3 service names
+                    # by removing the "AWS." prefix if present
+                    boto3_service_id = service_code
+                    if service_code.startswith("AWS."):
+                        boto3_service_id = service_code[4:].lower()
+                    # Some other service codes need additional transformation
+                    elif "." in service_code:
+                        boto3_service_id = service_code.split(".")[-1].lower()
+                    else:
+                        boto3_service_id = service_code.lower()
+
+                    available_services.append({"id": boto3_service_id, "name": service.get("ServiceName", service_code)})
+
+            # Check if there are more services to fetch
+            next_token = response.get("NextToken")
+            if not next_token:
+                break
+
+    except Exception as e:
+        logger.debug(f"Error fetching services with Service Quotas API for {region_code}: {e}")
+        # Fall back to the client creation method for a subset of common services
+        common_services = [
+            "ec2",
+            "s3",
+            "lambda",
+            "rds",
+            "dynamodb",
+            "cloudformation",
+            "sqs",
+            "sns",
+            "iam",
+            "cloudwatch",
+            "kinesis",
+            "apigateway",
+            "ecs",
+            "ecr",
+            "eks",
+            "route53",
+            "secretsmanager",
+            "ssm",
+            "kms",
+            "elasticbeanstalk",
+            "elasticache",
+            "elasticsearch",
+        ]
+
+        for service_name in common_services:
+            try:
+                # Try to create a client for the service in the region
+                # If it succeeds, the service is available
+                session.client(service_name, region_name=region_code)
+                available_services.append(
+                    {"id": service_name, "name": service_name.upper() if service_name in ["ec2", "s3"] else service_name.replace("-", " ").title()}
+                )
+            except Exception:
+                # If client creation fails, the service might not be available in this region
+                pass
+
+    return available_services
+
+
 def _get_region_geographic_location(region_code: str) -> Dict[str, str]:
     """Get geographic location information for a region.
 
@@ -224,23 +316,8 @@ def get_region_details(region_code: str) -> Dict[str, Any]:
         except Exception as e:
             logger.debug(f"Error fetching availability zones for {region_code}: {e}")
 
-        # Try to get available services in the region
-        # This is challenging as there's no direct AWS API for this,
-        # so we'll use a subset of common services to check availability
-        common_services = ["ec2", "s3", "lambda", "rds", "dynamodb", "cloudformation", "sqs", "sns", "iam", "cloudwatch", "kinesis", "apigateway"]
-
-        available_services = []
-        for service_name in common_services:
-            try:
-                # Try to create a client for the service in the region
-                # If it succeeds, the service is available
-                session.client(service_name, region_name=region_code)
-                available_services.append(service_name)
-            except Exception:
-                # If client creation fails, the service might not be available in this region
-                pass
-
-        region_info["services"] = available_services
+        # Get available services for the region
+        region_info["services"] = get_region_available_services(session, region_code)
 
     except Exception as e:
         logger.warning(f"Error fetching region details for {region_code}: {e}")

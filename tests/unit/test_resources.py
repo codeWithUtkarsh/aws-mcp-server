@@ -18,6 +18,7 @@ from aws_mcp_server.resources import (
     get_aws_environment,
     get_aws_profiles,
     get_aws_regions,
+    get_region_available_services,
     get_region_details,
     register_resources,
 )
@@ -531,7 +532,119 @@ def test_get_region_geographic_location():
 
 
 @patch("boto3.session.Session")
-def test_get_region_details(mock_session):
+def test_get_region_available_services(mock_session):
+    """Test retrieving available AWS services for a region using Service Quotas API."""
+    # Mock the Service Quotas client
+    mock_quotas_client = MagicMock()
+
+    # Set up the mock session to return our mock clients
+    def mock_client(service_name, **kwargs):
+        if service_name == "service-quotas":
+            return mock_quotas_client
+        return MagicMock()
+
+    mock_session.return_value.client.side_effect = mock_client
+
+    # Mock the Service Quotas API response
+    mock_quotas_client.list_services.return_value = {
+        "Services": [
+            {"ServiceCode": "AWS.EC2", "ServiceName": "Amazon Elastic Compute Cloud"},
+            {"ServiceCode": "AWS.S3", "ServiceName": "Amazon Simple Storage Service"},
+            {"ServiceCode": "Lambda", "ServiceName": "AWS Lambda"},
+            {"ServiceCode": "Organizations", "ServiceName": "AWS Organizations"},
+            {"ServiceCode": "AWS.CloudFormation", "ServiceName": "AWS CloudFormation"},
+        ],
+        "NextToken": None,
+    }
+
+    # Call the function
+    services = get_region_available_services(mock_session.return_value, "us-east-1")
+
+    # Verify the results
+    assert len(services) == 5
+
+    # Verify service code transformations
+    assert {"id": "ec2", "name": "Amazon Elastic Compute Cloud"} in services
+    assert {"id": "s3", "name": "Amazon Simple Storage Service"} in services
+    assert {"id": "lambda", "name": "AWS Lambda"} in services
+    assert {"id": "organizations", "name": "AWS Organizations"} in services
+    assert {"id": "cloudformation", "name": "AWS CloudFormation"} in services
+
+    # Verify the API was called correctly
+    mock_quotas_client.list_services.assert_called_once()
+
+
+@patch("boto3.session.Session")
+def test_get_region_available_services_pagination(mock_session):
+    """Test pagination handling in Service Quotas API."""
+    # Mock the Service Quotas client
+    mock_quotas_client = MagicMock()
+
+    # Set up the mock session to return our mock client
+    mock_session.return_value.client.return_value = mock_quotas_client
+
+    # Mock paginated responses
+    mock_quotas_client.list_services.side_effect = [
+        {
+            "Services": [
+                {"ServiceCode": "AWS.EC2", "ServiceName": "Amazon Elastic Compute Cloud"},
+                {"ServiceCode": "AWS.S3", "ServiceName": "Amazon Simple Storage Service"},
+            ],
+            "NextToken": "next-token-1",
+        },
+        {
+            "Services": [{"ServiceCode": "Lambda", "ServiceName": "AWS Lambda"}, {"ServiceCode": "AWS.DynamoDB", "ServiceName": "Amazon DynamoDB"}],
+            "NextToken": None,
+        },
+    ]
+
+    # Call the function
+    services = get_region_available_services(mock_session.return_value, "us-east-1")
+
+    # Verify the results
+    assert len(services) == 4
+
+    # Verify the pagination was handled correctly
+    assert mock_quotas_client.list_services.call_count == 2
+    # First call should have no NextToken
+    mock_quotas_client.list_services.assert_any_call()
+    # Second call should include the NextToken
+    mock_quotas_client.list_services.assert_any_call(NextToken="next-token-1")
+
+
+@patch("boto3.session.Session")
+def test_get_region_available_services_fallback(mock_session):
+    """Test fallback to client creation when Service Quotas API fails."""
+
+    # Mock the session to raise an exception for Service Quotas
+    def mock_client(service_name, **kwargs):
+        if service_name == "service-quotas":
+            raise ClientError({"Error": {"Code": "AccessDenied"}}, "ListServices")
+        # For other services, return a mock to simulate success
+        return MagicMock()
+
+    mock_session.return_value.client.side_effect = mock_client
+
+    # Call the function
+    services = get_region_available_services(mock_session.return_value, "us-east-1")
+
+    # Verify we got results from fallback method
+    assert len(services) > 0
+
+    # At least these common services should be in the result
+    common_service_ids = [service["id"] for service in services]
+    for service_id in ["ec2", "s3", "lambda"]:
+        assert service_id in common_service_ids
+
+    # Verify services have the correct structure
+    for service in services:
+        assert "id" in service
+        assert "name" in service
+
+
+@patch("aws_mcp_server.resources.get_region_available_services")
+@patch("boto3.session.Session")
+def test_get_region_details(mock_session, mock_get_region_available_services):
     """Test retrieving detailed AWS region information."""
     # Mock the boto3 session and clients
     mock_ec2 = MagicMock()
@@ -540,7 +653,7 @@ def test_get_region_details(mock_session):
     def mock_client(service_name, **kwargs):
         if service_name == "ec2":
             return mock_ec2
-        # Return a mock for other services to test service availability
+        # Return a mock for other services
         return MagicMock()
 
     mock_session.return_value.client.side_effect = mock_client
@@ -552,6 +665,10 @@ def test_get_region_details(mock_session):
             {"ZoneName": "us-east-1b", "State": "available", "ZoneId": "use1-az2", "ZoneType": "availability-zone"},
         ]
     }
+
+    # Mock the services list
+    mock_services = [{"id": "ec2", "name": "EC2"}, {"id": "s3", "name": "S3"}, {"id": "lambda", "name": "Lambda"}]
+    mock_get_region_available_services.return_value = mock_services
 
     # Call the function being tested
     region_details = get_region_details("us-east-1")
@@ -571,15 +688,20 @@ def test_get_region_details(mock_session):
     assert region_details["availability_zones"][0]["name"] == "us-east-1a"
     assert region_details["availability_zones"][1]["name"] == "us-east-1b"
 
-    # Verify services (should find at least some common services)
-    assert len(region_details["services"]) > 0
+    # Verify services
+    assert region_details["services"] == mock_services
+    mock_get_region_available_services.assert_called_once_with(mock_session.return_value, "us-east-1")
 
 
+@patch("aws_mcp_server.resources.get_region_available_services")
 @patch("boto3.session.Session")
-def test_get_region_details_with_error(mock_session):
+def test_get_region_details_with_error(mock_session, mock_get_region_available_services):
     """Test region details with API errors."""
     # Mock boto3 to raise an exception
     mock_session.return_value.client.side_effect = ClientError({"Error": {"Code": "AccessDenied", "Message": "Access denied"}}, "DescribeAvailabilityZones")
+
+    # Mock the get_region_available_services function to return an empty list
+    mock_get_region_available_services.return_value = []
 
     # Call the function being tested
     region_details = get_region_details("us-east-1")
@@ -589,7 +711,8 @@ def test_get_region_details_with_error(mock_session):
     assert region_details["name"] == "US East (N. Virginia)"
     assert "geographic_location" in region_details
     assert len(region_details["availability_zones"]) == 0
-    assert len(region_details["services"]) == 0
+    assert region_details["services"] == []
+    mock_get_region_available_services.assert_called_once_with(mock_session.return_value, "us-east-1")
 
 
 @patch("aws_mcp_server.resources.get_region_details")
@@ -604,7 +727,7 @@ def test_resource_aws_region_details(mock_get_region_details):
             {"name": "us-east-1a", "state": "available", "zone_id": "use1-az1", "zone_type": "availability-zone"},
             {"name": "us-east-1b", "state": "available", "zone_id": "use1-az2", "zone_type": "availability-zone"},
         ],
-        "services": ["ec2", "s3", "lambda", "dynamodb"],
+        "services": [{"id": "ec2", "name": "EC2"}, {"id": "s3", "name": "S3"}, {"id": "lambda", "name": "Lambda"}],
         "is_current": True,
     }
 
