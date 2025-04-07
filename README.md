@@ -34,6 +34,7 @@ The video demonstrates using Claude Desktop with AWS MCP Server to create a new 
 - **Command Documentation** - Detailed help information for AWS CLI commands
 - **Command Execution** - Execute AWS CLI commands and return human-readable results
 - **Unix Pipe Support** - Filter and transform AWS CLI output using standard Unix pipes and utilities
+- **AWS Resources Context** - Access to AWS profiles, regions, account information, and environment details via MCP Resources
 - **Prompt Templates** - Pre-defined prompt templates for common AWS tasks following best practices
 - **Docker Integration** - Simple deployment through containerization with multi-architecture support (AMD64/x86_64 and ARM64)
 - **AWS Authentication** - Leverages existing AWS credentials on the host machine
@@ -160,10 +161,20 @@ flowchart TD
         services[AWS Services]
     end
     
+    subgraph "MCP Server Components"
+        tools[AWS CLI Tools]
+        resources[AWS Resources]
+        templates[Prompt Templates]
+    end
+    
     config -->|Add MCP Server Config| claude
     claude -->|Docker Run Command| docker
+    docker --- tools
+    docker --- resources
+    docker --- templates
     aws_creds -->|Mount Read-only| docker
-    docker -->|API Calls| services
+    resources -.->|Read| aws_creds
+    tools -->|API Calls| services
 ```
 
 ### Example Interactions
@@ -203,6 +214,26 @@ Claude: Let me find that for you.
 2024-01-05 11:22:18 my-backup-bucket
 2024-03-01 09:44:12 weekly-backup-bucket
 2024-03-15 13:10:57 database-backup-bucket
+```
+
+**Accessing AWS Resources**:
+```
+User: What AWS regions are available for me to use?
+
+Claude: Let me check what AWS regions are available for you.
+
+Available regions:
+- us-east-1 (US East, N. Virginia) - Currently selected
+- us-east-2 (US East, Ohio)
+- us-west-1 (US West, N. California)
+- us-west-2 (US West, Oregon)
+- eu-west-1 (EU West, Ireland)
+- eu-central-1 (EU Central, Frankfurt)
+- ap-northeast-1 (Asia Pacific, Tokyo)
+- ap-southeast-1 (Asia Pacific, Singapore)
+- ap-southeast-2 (Asia Pacific, Sydney)
+
+You're currently using the us-east-1 region.
 ```
 
 **Using Prompt Templates**:

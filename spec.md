@@ -61,10 +61,11 @@ execute_command({"command": "aws s3api list-buckets --query 'Buckets[*].Name' --
 
 The server exposes AWS resources through the MCP Resources protocol:
 
-- **AWS Profiles**: Available AWS CLI profiles from AWS config.
-- **AWS Regions**: List of available AWS regions.
-- **Environment Variables**: Current AWS-related environment variables.
-- **Account Information**: Information about the current AWS account.
+- **AWS Profiles** (`aws://config/profiles`): Available AWS CLI profiles from AWS config.
+- **AWS Regions** (`aws://config/regions`): List of available AWS regions.
+- **AWS Region Details** (`aws://config/regions/{region}`): Detailed information about a specific region, including availability zones, geographic location, and services.
+- **AWS Environment Variables** (`aws://config/environment`): Current AWS-related environment variables and credential information.
+- **AWS Account Information** (`aws://config/account`): Information about the current AWS account.
 
 These resources provide context for executing AWS commands, allowing AI assistants to suggest region-specific commands, use the correct profile, and understand the current AWS environment.
 
@@ -268,6 +269,53 @@ The server provides access to AWS resources:
 }
 ```
 
+#### aws_region_details
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "resources/aws_region_details",
+  "params": {
+    "region": "us-east-1"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "result": {
+    "code": "us-east-1",
+    "name": "US East (N. Virginia)",
+    "geographic_location": {
+      "continent": "North America",
+      "country": "United States",
+      "city": "Ashburn, Virginia"
+    },
+    "availability_zones": [
+      {
+        "name": "us-east-1a",
+        "state": "available",
+        "zone_id": "use1-az1",
+        "zone_type": "availability-zone"
+      },
+      {
+        "name": "us-east-1b",
+        "state": "available",
+        "zone_id": "use1-az2",
+        "zone_type": "availability-zone"
+      }
+    ],
+    "services": ["ec2", "s3", "lambda", "dynamodb", "rds"],
+    "is_current": true
+  }
+}
+```
+
 #### aws_environment
 
 **Request:**
@@ -446,50 +494,56 @@ async def execute_command(
 register_prompts(mcp)
 ```
 
-**Resource Extension Implementation:**
+**Resource Implementation:**
 
 ```python
-# AWS Profiles Resource
-@mcp.resource()
-async def aws_profiles() -> dict:
-    """Get available AWS profiles."""
-    profiles = get_aws_profiles()
-    current_profile = os.environ.get("AWS_PROFILE", "default")
-    return {
-        "profiles": [
-            {"name": profile, "is_current": profile == current_profile}
-            for profile in profiles
-        ]
-    }
+# Register all MCP resources
+def register_resources(mcp):
+    """Register all resources with the MCP server instance."""
+    logger.info("Registering AWS resources")
 
-# AWS Regions Resource
-@mcp.resource()
-async def aws_regions() -> dict:
-    """Get available AWS regions."""
-    regions = get_aws_regions()
-    current_region = os.environ.get("AWS_REGION", "us-east-1")
-    return {
-        "regions": [
-            {
-                "name": region["RegionName"],
-                "description": region["RegionName"],
-                "is_current": region["RegionName"] == current_region,
-            }
-            for region in regions
-        ]
-    }
+    @mcp.resource(uri="aws://config/profiles", mime_type="application/json")
+    async def aws_profiles() -> dict:
+        """Get available AWS profiles."""
+        profiles = get_aws_profiles()
+        current_profile = os.environ.get("AWS_PROFILE", "default")
+        return {
+            "profiles": [
+                {"name": profile, "is_current": profile == current_profile}
+                for profile in profiles
+            ]
+        }
 
-# AWS Environment Resource
-@mcp.resource()
-async def aws_environment() -> dict:
-    """Get AWS environment information."""
-    # Implementation...
+    @mcp.resource(uri="aws://config/regions", mime_type="application/json")
+    async def aws_regions() -> dict:
+        """Get available AWS regions."""
+        regions = get_aws_regions()
+        current_region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+        return {
+            "regions": [
+                {
+                    "name": region["RegionName"],
+                    "description": region["RegionDescription"],
+                    "is_current": region["RegionName"] == current_region,
+                }
+                for region in regions
+            ]
+        }
+    
+    @mcp.resource(uri="aws://config/regions/{region}", mime_type="application/json")
+    async def aws_region_details(region: str) -> dict:
+        """Get detailed information about a specific AWS region."""
+        return get_region_details(region)
 
-# AWS Account Resource
-@mcp.resource()
-async def aws_account() -> dict:
-    """Get AWS account information."""
-    # Implementation...
+    @mcp.resource(uri="aws://config/environment", mime_type="application/json")
+    async def aws_environment() -> dict:
+        """Get AWS environment information."""
+        return get_aws_environment()
+
+    @mcp.resource(uri="aws://config/account", mime_type="application/json")
+    async def aws_account() -> dict:
+        """Get AWS account information."""
+        return get_aws_account_info()
 ```
 
 ### 2. Directory Structure
