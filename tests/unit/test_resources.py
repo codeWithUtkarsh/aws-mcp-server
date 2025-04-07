@@ -208,13 +208,7 @@ def test_register_resources():
     assert mock_mcp.resource.call_count == 5  # Should register 5 resources
 
     # Check that resource was called with the correct URIs
-    expected_uris = [
-        "aws://config/profiles", 
-        "aws://config/regions", 
-        "aws://config/regions/{region}",
-        "aws://config/environment", 
-        "aws://config/account"
-    ]
+    expected_uris = ["aws://config/profiles", "aws://config/regions", "aws://config/regions/{region}", "aws://config/environment", "aws://config/account"]
     called_uris = []
 
     # Extract the URI parameter from each call
@@ -516,7 +510,7 @@ def test_get_region_geographic_location():
     assert us_east_1["continent"] == "North America"
     assert us_east_1["country"] == "United States"
     assert us_east_1["city"] == "Ashburn, Virginia"
-    
+
     eu_west_2 = _get_region_geographic_location("eu-west-2")
     assert eu_west_2["continent"] == "Europe"
     assert eu_west_2["country"] == "United Kingdom"
@@ -534,52 +528,42 @@ def test_get_region_details(mock_session):
     """Test retrieving detailed AWS region information."""
     # Mock the boto3 session and clients
     mock_ec2 = MagicMock()
-    
+
     # Handle different boto3 client calls
     def mock_client(service_name, **kwargs):
         if service_name == "ec2":
             return mock_ec2
         # Return a mock for other services to test service availability
         return MagicMock()
-    
+
     mock_session.return_value.client.side_effect = mock_client
-    
+
     # Mock EC2 availability zones response
     mock_ec2.describe_availability_zones.return_value = {
         "AvailabilityZones": [
-            {
-                "ZoneName": "us-east-1a",
-                "State": "available",
-                "ZoneId": "use1-az1",
-                "ZoneType": "availability-zone"
-            },
-            {
-                "ZoneName": "us-east-1b",
-                "State": "available",
-                "ZoneId": "use1-az2",
-                "ZoneType": "availability-zone"
-            }
+            {"ZoneName": "us-east-1a", "State": "available", "ZoneId": "use1-az1", "ZoneType": "availability-zone"},
+            {"ZoneName": "us-east-1b", "State": "available", "ZoneId": "use1-az2", "ZoneType": "availability-zone"},
         ]
     }
-    
+
     # Call the function being tested
     region_details = get_region_details("us-east-1")
-    
+
     # Verify basic region information
     assert region_details["code"] == "us-east-1"
     assert region_details["name"] == "US East (N. Virginia)"
-    
+
     # Verify geographic location information
     geo_location = region_details["geographic_location"]
     assert geo_location["continent"] == "North America"
     assert geo_location["country"] == "United States"
     assert geo_location["city"] == "Ashburn, Virginia"
-    
+
     # Verify availability zones
     assert len(region_details["availability_zones"]) == 2
     assert region_details["availability_zones"][0]["name"] == "us-east-1a"
     assert region_details["availability_zones"][1]["name"] == "us-east-1b"
-    
+
     # Verify services (should find at least some common services)
     assert len(region_details["services"]) > 0
 
@@ -588,14 +572,11 @@ def test_get_region_details(mock_session):
 def test_get_region_details_with_error(mock_session):
     """Test region details with API errors."""
     # Mock boto3 to raise an exception
-    mock_session.return_value.client.side_effect = ClientError(
-        {"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
-        "DescribeAvailabilityZones"
-    )
-    
+    mock_session.return_value.client.side_effect = ClientError({"Error": {"Code": "AccessDenied", "Message": "Access denied"}}, "DescribeAvailabilityZones")
+
     # Call the function being tested
     region_details = get_region_details("us-east-1")
-    
+
     # Should still return basic information even if AWS APIs fail
     assert region_details["code"] == "us-east-1"
     assert region_details["name"] == "US East (N. Virginia)"
@@ -611,42 +592,28 @@ def test_resource_aws_region_details(mock_get_region_details):
     mock_region_details = {
         "code": "us-east-1",
         "name": "US East (N. Virginia)",
-        "geographic_location": {
-            "continent": "North America",
-            "country": "United States",
-            "city": "Ashburn, Virginia"
-        },
+        "geographic_location": {"continent": "North America", "country": "United States", "city": "Ashburn, Virginia"},
         "availability_zones": [
-            {
-                "name": "us-east-1a",
-                "state": "available",
-                "zone_id": "use1-az1",
-                "zone_type": "availability-zone"
-            },
-            {
-                "name": "us-east-1b",
-                "state": "available",
-                "zone_id": "use1-az2",
-                "zone_type": "availability-zone"
-            }
+            {"name": "us-east-1a", "state": "available", "zone_id": "use1-az1", "zone_type": "availability-zone"},
+            {"name": "us-east-1b", "state": "available", "zone_id": "use1-az2", "zone_type": "availability-zone"},
         ],
         "services": ["ec2", "s3", "lambda", "dynamodb"],
-        "is_current": True
+        "is_current": True,
     }
-    
+
     mock_get_region_details.return_value = mock_region_details
-    
+
     # Create a mock function that simulates the decorated function
     async def mock_resource_function(region: str):
         return mock_get_region_details(region)
-    
+
     # Call the function
     import asyncio
-    
+
     result = asyncio.run(mock_resource_function("us-east-1"))
-    
+
     # Verify the function was called with the correct region code
     mock_get_region_details.assert_called_once_with("us-east-1")
-    
+
     # Verify the result is the same as the mock details
     assert result == mock_region_details

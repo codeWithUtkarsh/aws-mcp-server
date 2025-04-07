@@ -264,18 +264,47 @@ aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws
 
 The AWS MCP Server includes the following pre-defined prompt templates:
 
+### Core Operations
+
 | Prompt                 | Description                                                   | Parameters                                          |
 |------------------------|---------------------------------------------------------------|-----------------------------------------------------|
 | `create_resource`      | Generate commands to create AWS resources with best practices | `resource_type`, `resource_name`                    |
-| `security_audit`       | Audit security settings for a specific AWS service            | `service`                                           |
-| `cost_optimization`    | Find cost optimization opportunities for a service            | `service`                                           |
 | `resource_inventory`   | Create comprehensive inventory of resources                   | `service`, `region` (optional)                      |
 | `troubleshoot_service` | Generate commands to troubleshoot service issues              | `service`, `resource_id`                            |
-| `iam_policy_generator` | Create least-privilege IAM policies                           | `service`, `actions`, `resource_pattern` (optional) |
-| `service_monitoring`   | Set up comprehensive monitoring                               | `service`, `metric_type` (optional)                 |
-| `disaster_recovery`    | Implement disaster recovery solutions                         | `service`, `recovery_point_objective` (optional)    |
-| `compliance_check`     | Check compliance with standards                               | `compliance_standard`, `service` (optional)         |
 | `resource_cleanup`     | Identify and safely clean up resources                        | `service`, `criteria` (optional)                    |
+
+### Security & Compliance
+
+| Prompt                     | Description                                                | Parameters                                          |
+|----------------------------|------------------------------------------------------------|-----------------------------------------------------|
+| `security_audit`           | Audit security settings for a specific AWS service         | `service`                                           |
+| `security_posture_assessment` | Comprehensive security assessment across your AWS environment | None                                          |
+| `iam_policy_generator`     | Create least-privilege IAM policies                        | `service`, `actions`, `resource_pattern` (optional) |
+| `compliance_check`         | Check compliance with standards                            | `compliance_standard`, `service` (optional)         |
+
+### Cost & Performance
+
+| Prompt               | Description                                             | Parameters                                         |
+|----------------------|---------------------------------------------------------|----------------------------------------------------|
+| `cost_optimization`  | Find cost optimization opportunities for a service      | `service`                                          |
+| `performance_tuning` | Optimize and tune performance of AWS resources          | `service`, `resource_id`                           |
+
+### Infrastructure & Architecture
+
+| Prompt                      | Description                                              | Parameters                                           |
+|-----------------------------|----------------------------------------------------------|------------------------------------------------------|
+| `serverless_deployment`     | Deploy serverless applications with best practices       | `application_name`, `runtime` (optional)             |
+| `container_orchestration`   | Set up container environments (ECS/EKS)                  | `cluster_name`, `service_type` (optional)            |
+| `vpc_network_design`        | Design and implement secure VPC networking               | `vpc_name`, `cidr_block` (optional)                  |
+| `infrastructure_automation` | Automate infrastructure management                       | `resource_type`, `automation_scope` (optional)       |
+| `multi_account_governance`  | Implement secure multi-account strategies                | `account_type` (optional)                            |
+
+### Reliability & Monitoring
+
+| Prompt               | Description                                           | Parameters                                          |
+|----------------------|-------------------------------------------------------|-----------------------------------------------------|
+| `service_monitoring` | Set up comprehensive monitoring                       | `service`, `metric_type` (optional)                 |
+| `disaster_recovery`  | Implement enterprise-grade DR solutions               | `service`, `recovery_point_objective` (optional)    |
 
 ## Security
 

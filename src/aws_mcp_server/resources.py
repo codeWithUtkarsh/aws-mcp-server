@@ -203,35 +203,32 @@ def get_region_details(region_code: str) -> Dict[str, Any]:
     try:
         # Create a session with the specified region
         session = boto3.session.Session(region_name=region_code)
-        
+
         # Get availability zones
         try:
             ec2 = session.client("ec2", region_name=region_code)
-            response = ec2.describe_availability_zones(
-                Filters=[{"Name": "region-name", "Values": [region_code]}]
-            )
-            
+            response = ec2.describe_availability_zones(Filters=[{"Name": "region-name", "Values": [region_code]}])
+
             azs = []
             for az in response.get("AvailabilityZones", []):
-                azs.append({
-                    "name": az.get("ZoneName", ""),
-                    "state": az.get("State", ""),
-                    "zone_id": az.get("ZoneId", ""),
-                    "zone_type": az.get("ZoneType", ""),
-                })
-            
+                azs.append(
+                    {
+                        "name": az.get("ZoneName", ""),
+                        "state": az.get("State", ""),
+                        "zone_id": az.get("ZoneId", ""),
+                        "zone_type": az.get("ZoneType", ""),
+                    }
+                )
+
             region_info["availability_zones"] = azs
         except Exception as e:
             logger.debug(f"Error fetching availability zones for {region_code}: {e}")
-        
+
         # Try to get available services in the region
         # This is challenging as there's no direct AWS API for this,
         # so we'll use a subset of common services to check availability
-        common_services = [
-            "ec2", "s3", "lambda", "rds", "dynamodb", "cloudformation",
-            "sqs", "sns", "iam", "cloudwatch", "kinesis", "apigateway"
-        ]
-        
+        common_services = ["ec2", "s3", "lambda", "rds", "dynamodb", "cloudformation", "sqs", "sns", "iam", "cloudwatch", "kinesis", "apigateway"]
+
         available_services = []
         for service_name in common_services:
             try:
@@ -242,12 +239,12 @@ def get_region_details(region_code: str) -> Dict[str, Any]:
             except Exception:
                 # If client creation fails, the service might not be available in this region
                 pass
-        
+
         region_info["services"] = available_services
-        
+
     except Exception as e:
         logger.warning(f"Error fetching region details for {region_code}: {e}")
-    
+
     return region_info
 
 
@@ -415,7 +412,7 @@ def register_resources(mcp):
                 for region in regions
             ]
         }
-    
+
     @mcp.resource(uri="aws://config/regions/{region}", mime_type="application/json")
     async def aws_region_details(region: str) -> dict:
         """Get detailed information about a specific AWS region.
