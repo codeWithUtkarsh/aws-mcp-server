@@ -83,5 +83,4 @@ exclude_lines = [
 ]
 
 [tool.setuptools_scm]
-# Generate version file
-version_file = "src/aws_mcp_server/_version.py"
+fallback_version="0.0.0-dev0"

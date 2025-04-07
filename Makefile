@@ -1,4 +1,4 @@
-.PHONY: help install dev-install uv-install uv-dev-install uv-update-lock test test-unit test-integration test-all test-coverage lint lint-fix format clean version-file docker-build docker-run docker-compose docker-compose-down docker-buildx
+.PHONY: help install dev-install uv-install uv-dev-install uv-update-lock test test-unit test-integration test-all test-coverage lint lint-fix format clean docker-build docker-run docker-compose docker-compose-down docker-buildx
 
 # Default target
 .DEFAULT_GOAL := help
@@ -51,20 +51,14 @@ clean: ## Remove build artifacts and cache directories
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type d -name '*.egg-info' -exec rm -rf {} +
 
-# Version file path
-VERSION_FILE := src/aws_mcp_server/_version.py
-
-# Generate version file rule
-$(VERSION_FILE): version-file
-
 # Server run commands
-run: $(VERSION_FILE) ## Run server with default transport (stdio)
+run: ## Run server with default transport (stdio)
 	python -m aws_mcp_server
 
-run-sse: $(VERSION_FILE) ## Run server with SSE transport
+run-sse: ## Run server with SSE transport
 	AWS_MCP_TRANSPORT=sse python -m aws_mcp_server
 
-run-mcp-cli: $(VERSION_FILE) ## Run server with MCP CLI
+run-mcp-cli: ## Run server with MCP CLI
 	mcp run src/aws_mcp_server/server.py
 
 # Get version information using setuptools_scm directly
@@ -72,14 +66,9 @@ VERSION_RAW := $(shell python -m setuptools_scm 2>/dev/null || echo "0.0.0+unkno
 # Make version Docker-compatible (replace + with -)
 VERSION := $(shell echo "$(VERSION_RAW)" | tr '+' '-')
 
-# Make the version-file target available externally
-version-file: ## Generate _version.py file using setuptools_scm (requires dev dependencies)
-	@echo "Generating version file..."
-	@python -m setuptools_scm || (echo "Error: setuptools_scm not found. Install with: pip install -e \".[dev]\"" && exit 1)
-
 # Docker related commands
-docker-build: version-file ## Build Docker image with proper labels and args
-	docker build -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
+docker-build: ## Build Docker image with proper labels and args
+	docker build --progress=plain -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
 		--build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
 		--build-arg VERSION=$(VERSION)
 
@@ -93,7 +82,7 @@ docker-compose-down: ## Stop Docker Compose services
 	docker-compose -f deploy/docker/docker-compose.yml down
 
 # Multi-architecture build (requires Docker Buildx)
-docker-buildx: version-file ## Build multi-architecture Docker image
+docker-buildx: ## Build multi-architecture Docker image
 	docker buildx build \
 		--platform linux/amd64,linux/arm64 \
 		-t aws-mcp-server:$(VERSION) \

@@ -84,6 +84,9 @@ jobs:
             echo "version=${DOCKER_VERSION}" >> $GITHUB_OUTPUT
           fi
           echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          
+          # Update the version in pyproject.toml
+          sed -i "s|fallback_version=\"0.0.0-dev0\"|fallback_version=\"${VERSION}\"|g" pyproject.toml
 
       - name: Extract metadata for Docker
         id: meta

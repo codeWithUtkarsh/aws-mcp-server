@@ -79,6 +79,9 @@ jobs:
           # Make version Docker-compatible (replace + with -)
           DOCKER_VERSION=$(echo "$VERSION" | tr '+' '-')
           
+          # Update the version in pyproject.toml
+          sed -i "s|fallback_version=\"0.0.0-dev0\"|fallback_version=\"${VERSION}\"|g" pyproject.toml
+          
           echo "version=$DOCKER_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
