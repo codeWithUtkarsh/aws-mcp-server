@@ -107,17 +107,7 @@ The AWS MCP Server can be configured using environment variables:
 
 ## Integrating with Claude Desktop
 
-### Option 1: Using Smithery (Easiest)
-
-The simplest way to install and configure AWS MCP Server for Claude Desktop is via [Smithery](https://smithery.ai/server/@alexei-led/aws-mcp-server):
-
-```bash
-npx -y @smithery/cli install @alexei-led/aws-mcp-server --client claude
-```
-
-This command will automatically configure Claude Desktop to use AWS MCP Server.
-
-### Option 2: Manual Configuration
+### Option 1: Manual Configuration
 
 To manually integrate AWS MCP Server with Claude Desktop:
 
@@ -143,6 +133,17 @@ To manually integrate AWS MCP Server with Claude Desktop:
      }
    }
    ```
+   
+### Option 2: Using Smithery (under testing; do not use in production)
+
+Another to install and configure AWS MCP Server for Claude Desktop is via [Smithery](https://smithery.ai/server/@alexei-led/aws-mcp-server):
+
+```bash
+npx -y @smithery/cli install @alexei-led/aws-mcp-server --client claude
+```
+
+This command will automatically configure Claude Desktop to use AWS MCP Server.
+
 
 3. **Restart Claude Desktop** to apply the changes
    - After restarting, you should see a hammer 🔨 icon in the bottom right corner of the input box
