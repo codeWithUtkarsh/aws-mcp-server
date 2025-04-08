@@ -74,7 +74,7 @@ The Docker image supports both AMD64/x86_64 (Intel/AMD) and ARM64 (Apple Silicon
 >
 > - `latest`: Latest stable release
 > - `x.y.z` (e.g., `1.0.0`): Specific version
-> - `sha-abc123`: Development builds, tagged with Git commit SHA
+> - `sha-<commit-sha>`: Development builds, tagged with Git commit SHA (e.g., `sha-gb697684`)
 
 ### Run Server Option 2: Using Python
 

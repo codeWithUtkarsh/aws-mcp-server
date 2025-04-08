@@ -175,8 +175,13 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
     logger.debug(f"Executing AWS command: {command}")
 
     try:
-        # Create subprocess
-        process = await asyncio.create_subprocess_shell(command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        # Split command safely for exec
+        cmd_parts = shlex.split(command)
+
+        # Create subprocess using exec (safer than shell=True)
+        process = await asyncio.create_subprocess_exec(
+            *cmd_parts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
 
         # Wait for the process to complete with timeout
         try:
