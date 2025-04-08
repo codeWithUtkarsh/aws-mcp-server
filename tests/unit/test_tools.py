@@ -74,6 +74,7 @@ def test_split_pipe_command():
 @pytest.mark.asyncio
 async def test_execute_piped_command_success():
     """Test successful execution of a piped command."""
+    # For piped commands, we still need to use create_subprocess_shell since we're executing a shell pipeline
     with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
         # Mock a successful process
         process_mock = AsyncMock()

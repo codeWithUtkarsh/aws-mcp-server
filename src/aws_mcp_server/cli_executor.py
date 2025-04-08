@@ -75,7 +75,11 @@ async def check_aws_cli_installed() -> bool:
         True if AWS CLI is installed, False otherwise
     """
     try:
-        process = await asyncio.create_subprocess_shell("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        # Split command safely for exec
+        cmd_parts = ["aws", "--version"]
+
+        # Create subprocess using exec (safer than shell=True)
+        process = await asyncio.create_subprocess_exec(*cmd_parts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         await process.communicate()
         return process.returncode == 0
     except Exception:
@@ -179,9 +183,7 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         cmd_parts = shlex.split(command)
 
         # Create subprocess using exec (safer than shell=True)
-        process = await asyncio.create_subprocess_exec(
-            *cmd_parts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
+        process = await asyncio.create_subprocess_exec(*cmd_parts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
         # Wait for the process to complete with timeout
         try:
