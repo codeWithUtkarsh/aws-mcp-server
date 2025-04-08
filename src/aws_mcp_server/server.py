@@ -60,7 +60,7 @@ register_resources(mcp)
 
 
 @mcp.tool()
-async def describe_command(
+async def aws_cli_help(
     service: str = Field(description="AWS service (e.g., s3, ec2)"),
     command: str | None = Field(description="Command within the service", default=None),
     ctx: Context | None = None,
@@ -83,12 +83,12 @@ async def describe_command(
         result = await get_command_help(service, command)
         return result
     except Exception as e:
-        logger.error(f"Error in describe_command: {e}")
+        logger.error(f"Error in aws_cli_help: {e}")
         return CommandHelpResult(help_text=f"Error retrieving help: {str(e)}")
 
 
 @mcp.tool()
-async def execute_command(
+async def aws_cli_pipeline(
     command: str = Field(description="Complete AWS CLI command to execute (can include pipes with Unix commands)"),
     timeout: int | None = Field(description="Timeout in seconds (defaults to AWS_MCP_TIMEOUT)", default=None),
     ctx: Context | None = None,
@@ -143,5 +143,5 @@ async def execute_command(
         logger.warning(f"Command execution error: {e}")
         return CommandResult(status="error", output=f"Command execution error: {str(e)}")
     except Exception as e:
-        logger.error(f"Error in execute_command: {e}")
+        logger.error(f"Error in aws_cli_pipeline: {e}")
         return CommandResult(status="error", output=f"Unexpected error: {str(e)}")

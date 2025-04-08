@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from aws_mcp_server.server import execute_command
+from aws_mcp_server.server import aws_cli_pipeline
 
 
 def test_aws_cli_installed():
@@ -36,7 +36,7 @@ async def test_aws_execute_command():
     This test is marked as integration because it requires AWS credentials.
     """
     # Test a simple S3 bucket listing command
-    result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
+    result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
 
     # Verify the result
     assert isinstance(result, dict)
@@ -61,17 +61,17 @@ async def test_aws_bucket_creation():
 
     try:
         # Create bucket with region specification
-        create_result = await execute_command(command=f"aws s3 mb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+        create_result = await aws_cli_pipeline(command=f"aws s3 mb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
         assert create_result["status"] == "success", f"Failed to create bucket: {create_result['output']}"
 
         # Verify bucket exists
         await asyncio.sleep(3)  # Wait for bucket to be fully available
-        list_result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
+        list_result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
         assert bucket_name in list_result["output"], "Bucket was not found in bucket list"
 
     finally:
         # Clean up - delete the bucket
-        await execute_command(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+        await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
 
 
 @pytest.mark.asyncio
@@ -86,7 +86,7 @@ async def test_aws_command_mocked():
         mock_execute.return_value = {"status": "success", "output": "Mock bucket list output"}
 
         # Execute the command
-        result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
+        result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
 
         # Verify the mock was called correctly
         mock_execute.assert_called_once()

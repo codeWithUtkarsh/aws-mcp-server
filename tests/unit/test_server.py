@@ -5,7 +5,7 @@ from unittest.mock import ANY, AsyncMock, patch
 import pytest
 
 from aws_mcp_server.cli_executor import CommandExecutionError, CommandValidationError
-from aws_mcp_server.server import describe_command, execute_command, mcp, run_startup_checks
+from aws_mcp_server.server import aws_cli_help, aws_cli_pipeline, mcp, run_startup_checks
 
 
 def test_run_startup_checks():
@@ -44,14 +44,14 @@ def test_run_startup_checks():
         ("ec2", "describe-instances", {"help_text": "Test help text"}),
     ],
 )
-async def test_describe_command(service, command, expected_result):
-    """Test the describe_command tool with various inputs."""
+async def test_aws_cli_help(service, command, expected_result):
+    """Test the aws_cli_help tool with various inputs."""
     # Mock the get_command_help function instead of execute_aws_command
     with patch("aws_mcp_server.server.get_command_help", new_callable=AsyncMock) as mock_get_help:
         mock_get_help.return_value = expected_result
 
         # Call the tool with specified service and command
-        result = await describe_command(service=service, command=command)
+        result = await aws_cli_help(service=service, command=command)
 
         # Verify the result
         assert result == expected_result
@@ -61,14 +61,14 @@ async def test_describe_command(service, command, expected_result):
 
 
 @pytest.mark.asyncio
-async def test_describe_command_with_context():
-    """Test the describe_command tool with context."""
+async def test_aws_cli_help_with_context():
+    """Test the aws_cli_help tool with context."""
     mock_ctx = AsyncMock()
 
     with patch("aws_mcp_server.server.get_command_help", new_callable=AsyncMock) as mock_get_help:
         mock_get_help.return_value = {"help_text": "Test help text"}
 
-        result = await describe_command(service="s3", command="ls", ctx=mock_ctx)
+        result = await aws_cli_help(service="s3", command="ls", ctx=mock_ctx)
 
         assert result == {"help_text": "Test help text"}
         mock_ctx.info.assert_called_once()
@@ -76,10 +76,10 @@ async def test_describe_command_with_context():
 
 
 @pytest.mark.asyncio
-async def test_describe_command_exception_handling():
-    """Test exception handling in describe_command."""
+async def test_aws_cli_help_exception_handling():
+    """Test exception handling in aws_cli_help."""
     with patch("aws_mcp_server.server.get_command_help", side_effect=Exception("Test exception")):
-        result = await describe_command(service="s3")
+        result = await aws_cli_help(service="s3")
 
         assert "help_text" in result
         assert "Error retrieving help" in result["help_text"]
@@ -98,16 +98,16 @@ async def test_describe_command_exception_handling():
         ("aws ec2 describe-instances --filters Name=instance-state-name,Values=running", None, {"status": "success", "output": "Running instances"}),
     ],
 )
-async def test_execute_command_success(command, timeout, expected_result):
-    """Test the execute_command tool with successful execution."""
+async def test_aws_cli_pipeline_success(command, timeout, expected_result):
+    """Test the aws_cli_pipeline tool with successful execution."""
     # Need to patch check_aws_cli_installed to avoid the coroutine warning
     with patch("aws_mcp_server.server.check_aws_cli_installed", return_value=None):
         # Mock the execute_aws_command function
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = expected_result
 
-            # Call the execute_command function
-            result = await execute_command(command=command, timeout=timeout)
+            # Call the aws_cli_pipeline function
+            result = await aws_cli_pipeline(command=command, timeout=timeout)
 
             # Verify the result
             assert result["status"] == expected_result["status"]
@@ -118,8 +118,8 @@ async def test_execute_command_success(command, timeout, expected_result):
 
 
 @pytest.mark.asyncio
-async def test_execute_command_with_context():
-    """Test the execute_command tool with context."""
+async def test_aws_cli_pipeline_with_context():
+    """Test the aws_cli_pipeline tool with context."""
     mock_ctx = AsyncMock()
 
     # Need to patch check_aws_cli_installed to avoid the coroutine warning
@@ -128,7 +128,7 @@ async def test_execute_command_with_context():
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = {"status": "success", "output": "Test output"}
 
-            result = await execute_command(command="aws s3 ls", ctx=mock_ctx)
+            result = await aws_cli_pipeline(command="aws s3 ls", ctx=mock_ctx)
 
             assert result["status"] == "success"
             assert result["output"] == "Test output"
@@ -143,7 +143,7 @@ async def test_execute_command_with_context():
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = {"status": "error", "output": "Error output"}
 
-            result = await execute_command(command="aws s3 ls", ctx=mock_ctx)
+            result = await aws_cli_pipeline(command="aws s3 ls", ctx=mock_ctx)
 
             assert result["status"] == "error"
             assert result["output"] == "Error output"
@@ -155,8 +155,8 @@ async def test_execute_command_with_context():
 
 
 @pytest.mark.asyncio
-async def test_execute_command_with_context_and_timeout():
-    """Test the execute_command tool with context and timeout."""
+async def test_aws_cli_pipeline_with_context_and_timeout():
+    """Test the aws_cli_pipeline tool with context and timeout."""
     mock_ctx = AsyncMock()
 
     # Need to patch check_aws_cli_installed to avoid the coroutine warning
@@ -164,7 +164,7 @@ async def test_execute_command_with_context_and_timeout():
         with patch("aws_mcp_server.server.execute_aws_command", new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = {"status": "success", "output": "Test output"}
 
-            await execute_command(command="aws s3 ls", timeout=60, ctx=mock_ctx)
+            await aws_cli_pipeline(command="aws s3 ls", timeout=60, ctx=mock_ctx)
 
             # Verify timeout was mentioned in the context message
             message = mock_ctx.info.call_args_list[0][0][0]
@@ -185,14 +185,14 @@ async def test_execute_command_with_context_and_timeout():
         ("aws dynamodb scan", Exception("Unexpected error"), "Unexpected error", "Unexpected error"),
     ],
 )
-async def test_execute_command_errors(command, exception, expected_error_type, expected_message):
-    """Test the execute_command tool with various error scenarios."""
+async def test_aws_cli_pipeline_errors(command, exception, expected_error_type, expected_message):
+    """Test the aws_cli_pipeline tool with various error scenarios."""
     # Need to patch check_aws_cli_installed to avoid the coroutine warning
     with patch("aws_mcp_server.server.check_aws_cli_installed", return_value=None):
         # Mock the execute_aws_command function to raise the specified exception
         with patch("aws_mcp_server.server.execute_aws_command", side_effect=exception) as mock_execute:
             # Call the tool
-            result = await execute_command(command=command)
+            result = await aws_cli_pipeline(command=command)
 
             # Verify error status and message
             assert result["status"] == "error"
@@ -211,5 +211,5 @@ async def test_mcp_server_initialization():
 
     # Verify tools are registered by calling them
     # This ensures the tools exist without depending on FastMCP's internal structure
-    assert callable(describe_command)
-    assert callable(execute_command)
+    assert callable(aws_cli_help)
+    assert callable(aws_cli_pipeline)

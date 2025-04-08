@@ -18,7 +18,7 @@ import uuid
 
 import pytest
 
-from aws_mcp_server.server import describe_command, execute_command
+from aws_mcp_server.server import aws_cli_help, aws_cli_pipeline
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,9 +46,9 @@ class TestAWSLiveIntegration:
             ("s3", "ls", ["list s3 objects", "options", "examples"]),
         ],
     )
-    async def test_describe_command(self, ensure_aws_credentials, service, command, expected_content):
+    async def test_aws_cli_help(self, ensure_aws_credentials, service, command, expected_content):
         """Test getting help for various AWS commands."""
-        result = await describe_command(service=service, command=command, ctx=None)
+        result = await aws_cli_help(service=service, command=command, ctx=None)
 
         # Verify we got a valid response
         assert isinstance(result, dict)
@@ -63,7 +63,7 @@ class TestAWSLiveIntegration:
     @pytest.mark.integration
     async def test_list_s3_buckets(self, ensure_aws_credentials):
         """Test listing S3 buckets."""
-        result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
+        result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
 
         # Verify the result format
         assert isinstance(result, dict)
@@ -106,7 +106,7 @@ class TestAWSLiveIntegration:
         try:
             # Create the bucket
             create_cmd = f"aws s3 mb s3://{bucket_name} --region {region}"
-            result = await execute_command(command=create_cmd, timeout=None, ctx=None)
+            result = await aws_cli_pipeline(command=create_cmd, timeout=None, ctx=None)
             assert result["status"] == "success", f"Failed to create bucket: {result['output']}"
 
             # Wait for bucket to be fully available
@@ -117,18 +117,18 @@ class TestAWSLiveIntegration:
                 f.write(test_file_content)
 
             # Upload the file to S3
-            upload_result = await execute_command(
+            upload_result = await aws_cli_pipeline(
                 command=f"aws s3 cp {test_file_name} s3://{bucket_name}/{test_file_name} --region {region}", timeout=None, ctx=None
             )
             assert upload_result["status"] == "success"
 
             # List the bucket contents
-            list_result = await execute_command(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
+            list_result = await aws_cli_pipeline(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
             assert list_result["status"] == "success"
             assert test_file_name in list_result["output"]
 
             # Download the file with a different name
-            download_result = await execute_command(
+            download_result = await aws_cli_pipeline(
                 command=f"aws s3 cp s3://{bucket_name}/{test_file_name} {downloaded_file_name} --region {region}", timeout=None, ctx=None
             )
             assert download_result["status"] == "success"
@@ -145,10 +145,10 @@ class TestAWSLiveIntegration:
                     os.remove(file_name)
 
             # Clean up: Remove files from S3
-            await execute_command(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
+            await aws_cli_pipeline(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
 
             # Delete the bucket
-            await execute_command(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+            await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -163,7 +163,7 @@ class TestAWSLiveIntegration:
     )
     async def test_aws_json_output_formatting(self, ensure_aws_credentials, command, expected_attributes, description):
         """Test JSON output formatting from various AWS commands."""
-        result = await execute_command(command=command, timeout=None, ctx=None)
+        result = await aws_cli_pipeline(command=command, timeout=None, ctx=None)
 
         assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
 
@@ -207,7 +207,7 @@ class TestAWSLiveIntegration:
     )
     async def test_piped_commands(self, ensure_aws_credentials, command, validation_func, description):
         """Test execution of various piped commands with AWS CLI and Unix utilities."""
-        result = await execute_command(command=command, timeout=None, ctx=None)
+        result = await aws_cli_pipeline(command=command, timeout=None, ctx=None)
 
         assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
 

@@ -12,8 +12,8 @@ A lightweight service that enables AI assistants to execute AWS CLI commands thr
 
 The AWS MCP Server provides a bridge between MCP-aware AI assistants (like Claude Desktop, Cursor, Windsurf) and the AWS CLI. It enables these assistants to:
 
-1. **Retrieve AWS CLI documentation** - Get detailed help on AWS services and commands
-2. **Execute AWS CLI commands** - Run commands and receive formatted results optimized for AI consumption
+1. **Retrieve AWS CLI documentation** (`aws_cli_help`) - Get detailed help on AWS services and commands
+2. **Execute AWS CLI commands** (`aws_cli_pipeline`) - Run commands with Unix pipes and receive formatted results optimized for AI consumption
 
 ```mermaid
 flowchart LR

@@ -8,7 +8,7 @@ import uuid
 import pytest
 
 from aws_mcp_server.config import AWS_REGION
-from aws_mcp_server.server import execute_command
+from aws_mcp_server.server import aws_cli_pipeline
 
 
 @pytest.mark.integration
@@ -27,7 +27,7 @@ async def test_create_and_delete_s3_bucket():
     try:
         # Create the bucket
         create_cmd = f"aws s3 mb s3://{bucket_name} --region {region}"
-        result = await execute_command(command=create_cmd, timeout=None, ctx=None)
+        result = await aws_cli_pipeline(command=create_cmd, timeout=None, ctx=None)
 
         # Check if bucket was created successfully
         assert result["status"] == "success", f"Failed to create bucket: {result['output']}"
@@ -36,7 +36,7 @@ async def test_create_and_delete_s3_bucket():
         await asyncio.sleep(3)
 
         # List buckets to verify it exists
-        list_result = await execute_command(command="aws s3 ls", timeout=None, ctx=None)
+        list_result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
         assert bucket_name in list_result["output"], "Bucket not found in bucket list"
 
         # Try to create a test file
@@ -45,11 +45,11 @@ async def test_create_and_delete_s3_bucket():
             f.write(test_content)
 
         # Upload the file
-        upload_result = await execute_command(command=f"aws s3 cp test_file.txt s3://{bucket_name}/test_file.txt --region {region}", timeout=None, ctx=None)
+        upload_result = await aws_cli_pipeline(command=f"aws s3 cp test_file.txt s3://{bucket_name}/test_file.txt --region {region}", timeout=None, ctx=None)
         assert upload_result["status"] == "success", f"Failed to upload file: {upload_result['output']}"
 
         # List bucket contents
-        list_files_result = await execute_command(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
+        list_files_result = await aws_cli_pipeline(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
         assert "test_file.txt" in list_files_result["output"], "Uploaded file not found in bucket"
 
     finally:
@@ -59,8 +59,8 @@ async def test_create_and_delete_s3_bucket():
             os.remove("test_file.txt")
 
         # Delete all objects in the bucket
-        await execute_command(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
+        await aws_cli_pipeline(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
 
         # Delete the bucket
-        delete_result = await execute_command(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+        delete_result = await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
         assert delete_result["status"] == "success", f"Failed to delete bucket: {delete_result['output']}"
