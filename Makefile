@@ -34,17 +34,20 @@ format: ## Format code with ruff
 test: ## Run tests excluding integration tests
 	python -m pytest -v -m "not integration" --cov=aws_mcp_server --cov-report=xml --cov-report=term
 
-test-unit: ## Run unit tests only
-	python -m pytest -v -m unit
+test-unit: ## Run unit tests only (all tests except integration tests)
+	python -m pytest -v -m "not integration" --cov=aws_mcp_server --cov-report=term
 
 test-integration: ## Run integration tests only (requires AWS credentials)
-	python -m pytest -v -m integration
+	python -m pytest -v -m integration --run-integration
 
 test-all: ## Run all tests including integration tests
-	python -m pytest -v
+	python -m pytest -v --run-integration
 
-test-coverage: ## Run tests with coverage report
-	python -m pytest --cov=aws_mcp_server --cov-report=term-missing
+test-coverage: ## Run tests with coverage report (excluding integration tests)
+	python -m pytest -m "not integration" --cov=aws_mcp_server --cov-report=term-missing
+
+test-coverage-all: ## Run all tests with coverage report (including integration tests)
+	python -m pytest --run-integration --cov=aws_mcp_server --cov-report=term-missing
 
 clean: ## Remove build artifacts and cache directories
 	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .ruff_cache/ __pycache__/
@@ -68,7 +71,7 @@ VERSION := $(shell echo "$(VERSION_RAW)" | tr '+' '-')
 
 # Docker related commands
 docker-build: ## Build Docker image with proper labels and args
-	docker build --progress=plain -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
+	docker build -t aws-mcp-server:$(VERSION) -f deploy/docker/Dockerfile . \
 		--build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
 		--build-arg VERSION=$(VERSION)
 

@@ -34,6 +34,7 @@ The video demonstrates using Claude Desktop with AWS MCP Server to create a new 
 - **Command Documentation** - Detailed help information for AWS CLI commands
 - **Command Execution** - Execute AWS CLI commands and return human-readable results
 - **Unix Pipe Support** - Filter and transform AWS CLI output using standard Unix pipes and utilities
+- **AWS Resources Context** - Access to AWS profiles, regions, account information, and environment details via MCP Resources
 - **Prompt Templates** - Pre-defined prompt templates for common AWS tasks following best practices
 - **Docker Integration** - Simple deployment through containerization with multi-architecture support (AMD64/x86_64 and ARM64)
 - **AWS Authentication** - Leverages existing AWS credentials on the host machine
@@ -160,10 +161,20 @@ flowchart TD
         services[AWS Services]
     end
     
+    subgraph "MCP Server Components"
+        tools[AWS CLI Tools]
+        resources[AWS Resources]
+        templates[Prompt Templates]
+    end
+    
     config -->|Add MCP Server Config| claude
     claude -->|Docker Run Command| docker
+    docker --- tools
+    docker --- resources
+    docker --- templates
     aws_creds -->|Mount Read-only| docker
-    docker -->|API Calls| services
+    resources -.->|Read| aws_creds
+    tools -->|API Calls| services
 ```
 
 ### Example Interactions
@@ -205,6 +216,26 @@ Claude: Let me find that for you.
 2024-03-15 13:10:57 database-backup-bucket
 ```
 
+**Accessing AWS Resources**:
+```
+User: What AWS regions are available for me to use?
+
+Claude: Let me check what AWS regions are available for you.
+
+Available regions:
+- us-east-1 (US East, N. Virginia) - Currently selected
+- us-east-2 (US East, Ohio)
+- us-west-1 (US West, N. California)
+- us-west-2 (US West, Oregon)
+- eu-west-1 (EU West, Ireland)
+- eu-central-1 (EU Central, Frankfurt)
+- ap-northeast-1 (Asia Pacific, Tokyo)
+- ap-southeast-1 (Asia Pacific, Singapore)
+- ap-southeast-2 (Asia Pacific, Sydney)
+
+You're currently using the us-east-1 region.
+```
+
 **Using Prompt Templates**:
 ```
 User: I need to perform a security audit of my S3 buckets
@@ -233,18 +264,47 @@ aws s3api list-buckets --query 'Buckets[*].Name' --output text | xargs -I {} aws
 
 The AWS MCP Server includes the following pre-defined prompt templates:
 
+### Core Operations
+
 | Prompt                 | Description                                                   | Parameters                                          |
 |------------------------|---------------------------------------------------------------|-----------------------------------------------------|
 | `create_resource`      | Generate commands to create AWS resources with best practices | `resource_type`, `resource_name`                    |
-| `security_audit`       | Audit security settings for a specific AWS service            | `service`                                           |
-| `cost_optimization`    | Find cost optimization opportunities for a service            | `service`                                           |
 | `resource_inventory`   | Create comprehensive inventory of resources                   | `service`, `region` (optional)                      |
 | `troubleshoot_service` | Generate commands to troubleshoot service issues              | `service`, `resource_id`                            |
-| `iam_policy_generator` | Create least-privilege IAM policies                           | `service`, `actions`, `resource_pattern` (optional) |
-| `service_monitoring`   | Set up comprehensive monitoring                               | `service`, `metric_type` (optional)                 |
-| `disaster_recovery`    | Implement disaster recovery solutions                         | `service`, `recovery_point_objective` (optional)    |
-| `compliance_check`     | Check compliance with standards                               | `compliance_standard`, `service` (optional)         |
 | `resource_cleanup`     | Identify and safely clean up resources                        | `service`, `criteria` (optional)                    |
+
+### Security & Compliance
+
+| Prompt                     | Description                                                | Parameters                                          |
+|----------------------------|------------------------------------------------------------|-----------------------------------------------------|
+| `security_audit`           | Audit security settings for a specific AWS service         | `service`                                           |
+| `security_posture_assessment` | Comprehensive security assessment across your AWS environment | None                                          |
+| `iam_policy_generator`     | Create least-privilege IAM policies                        | `service`, `actions`, `resource_pattern` (optional) |
+| `compliance_check`         | Check compliance with standards                            | `compliance_standard`, `service` (optional)         |
+
+### Cost & Performance
+
+| Prompt               | Description                                             | Parameters                                         |
+|----------------------|---------------------------------------------------------|----------------------------------------------------|
+| `cost_optimization`  | Find cost optimization opportunities for a service      | `service`                                          |
+| `performance_tuning` | Optimize and tune performance of AWS resources          | `service`, `resource_id`                           |
+
+### Infrastructure & Architecture
+
+| Prompt                      | Description                                              | Parameters                                           |
+|-----------------------------|----------------------------------------------------------|------------------------------------------------------|
+| `serverless_deployment`     | Deploy serverless applications with best practices       | `application_name`, `runtime` (optional)             |
+| `container_orchestration`   | Set up container environments (ECS/EKS)                  | `cluster_name`, `service_type` (optional)            |
+| `vpc_network_design`        | Design and implement secure VPC networking               | `vpc_name`, `cidr_block` (optional)                  |
+| `infrastructure_automation` | Automate infrastructure management                       | `resource_type`, `automation_scope` (optional)       |
+| `multi_account_governance`  | Implement secure multi-account strategies                | `account_type` (optional)                            |
+
+### Reliability & Monitoring
+
+| Prompt               | Description                                           | Parameters                                          |
+|----------------------|-------------------------------------------------------|-----------------------------------------------------|
+| `service_monitoring` | Set up comprehensive monitoring                       | `service`, `metric_type` (optional)                 |
+| `disaster_recovery`  | Implement enterprise-grade DR solutions               | `service`, `recovery_point_objective` (optional)    |
 
 ## Security
 
@@ -259,24 +319,39 @@ The AWS MCP Server includes the following pre-defined prompt templates:
 ### Setting Up the Development Environment
 
 ```bash
-# Install only runtime dependencies
+# Install only runtime dependencies using pip
 pip install -e .
 
-# Install all development dependencies
+# Install all development dependencies using pip
 pip install -e ".[dev]"
 
-# Run unit tests
-pytest -k "not integration"
-
-# Run tests with coverage report
-pytest -k "not integration" --cov-report=html
-
-# Run linting
-ruff check src/ tests/
-
-# Run formatting
-ruff format src/ tests/
+# Or use uv for faster dependency management
+make uv-install       # Install runtime dependencies
+make uv-dev-install   # Install development dependencies
 ```
+
+### Makefile Commands
+
+The project includes a Makefile with various targets for common tasks:
+
+```bash
+# Test commands
+make test             # Run tests excluding integration tests
+make test-unit        # Run unit tests only (all tests except integration tests)
+make test-integration # Run integration tests only (requires AWS credentials)
+make test-all         # Run all tests including integration tests
+
+# Test coverage commands
+make test-coverage    # Run tests with coverage report (excluding integration tests)
+make test-coverage-all # Run all tests with coverage report (including integration tests)
+
+# Linting and formatting
+make lint             # Run linters (ruff check and format --check)
+make lint-fix         # Run linters and auto-fix issues where possible
+make format           # Format code with ruff
+```
+
+For a complete list of available commands, run `make help`.
 
 ### Code Coverage
 
@@ -300,11 +375,20 @@ Integration tests verify AWS MCP Server works correctly with actual AWS resource
 2. **Run integration tests**:
    ```bash
    # Run all tests including integration tests
-   pytest --run-integration
+   make test-all
    
    # Run only integration tests
-   pytest --run-integration -m integration
+   make test-integration
    ```
+
+Or you can run the pytest commands directly:
+```bash
+# Run all tests including integration tests
+pytest --run-integration
+
+# Run only integration tests
+pytest --run-integration -m integration
+```
 
 ## Troubleshooting
 

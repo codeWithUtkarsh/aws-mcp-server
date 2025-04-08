@@ -184,6 +184,7 @@ async def execute_piped_command(pipe_command: str, timeout: int | None = None) -
         except asyncio.TimeoutError:
             logger.warning(f"Piped command timed out after {timeout} seconds: {pipe_command}")
             try:
+                # process.kill() is synchronous, not a coroutine
                 process.kill()
             except Exception as e:
                 logger.error(f"Error killing process: {e}")
