@@ -22,7 +22,7 @@ from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
 @pytest.mark.asyncio
 async def test_execute_aws_command_success():
     """Test successful command execution."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a successful process
         process_mock = AsyncMock()
         process_mock.returncode = 0
@@ -33,13 +33,13 @@ async def test_execute_aws_command_success():
 
         assert result["status"] == "success"
         assert result["output"] == "Success output"
-        mock_subprocess.assert_called_once_with("aws s3 ls", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        mock_subprocess.assert_called_once_with("aws", "s3", "ls", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
 
 @pytest.mark.asyncio
 async def test_execute_aws_command_with_custom_timeout():
     """Test command execution with custom timeout."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         process_mock = AsyncMock()
         process_mock.returncode = 0
         process_mock.communicate.return_value = (b"Success output", b"")
@@ -60,7 +60,7 @@ async def test_execute_aws_command_with_custom_timeout():
 @pytest.mark.asyncio
 async def test_execute_aws_command_error():
     """Test command execution error."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a failed process
         process_mock = AsyncMock()
         process_mock.returncode = 1
@@ -81,7 +81,7 @@ async def test_execute_aws_command_error():
 @pytest.mark.asyncio
 async def test_execute_aws_command_auth_error():
     """Test command execution with authentication error."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a process that returns auth error
         process_mock = AsyncMock()
         process_mock.returncode = 1
@@ -99,7 +99,7 @@ async def test_execute_aws_command_auth_error():
 @pytest.mark.asyncio
 async def test_execute_aws_command_timeout():
     """Test command timeout."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a process that times out
         process_mock = AsyncMock()
         # Use a properly awaitable mock that raises TimeoutError
@@ -123,7 +123,7 @@ async def test_execute_aws_command_timeout():
 @pytest.mark.asyncio
 async def test_execute_aws_command_kill_failure():
     """Test failure to kill process after timeout."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a process that times out
         process_mock = AsyncMock()
         # Use a properly awaitable mock that raises TimeoutError
@@ -143,7 +143,7 @@ async def test_execute_aws_command_kill_failure():
 @pytest.mark.asyncio
 async def test_execute_aws_command_general_exception():
     """Test handling of general exceptions during command execution."""
-    with patch("asyncio.create_subprocess_shell", side_effect=Exception("Test exception")):
+    with patch("asyncio.create_subprocess_exec", side_effect=Exception("Test exception")):
         with pytest.raises(CommandExecutionError) as excinfo:
             await execute_aws_command("aws s3 ls")
 
@@ -154,7 +154,7 @@ async def test_execute_aws_command_general_exception():
 @pytest.mark.asyncio
 async def test_execute_aws_command_truncate_output():
     """Test truncation of large outputs."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a successful process with large output
         process_mock = AsyncMock()
         process_mock.returncode = 0
@@ -209,11 +209,11 @@ def test_is_auth_error(error_message, expected_result):
 async def test_check_aws_cli_installed(returncode, stdout, stderr, exception, expected_result):
     """Test check_aws_cli_installed function with various scenarios."""
     if exception:
-        with patch("asyncio.create_subprocess_shell", side_effect=exception):
+        with patch("asyncio.create_subprocess_exec", side_effect=exception):
             result = await check_aws_cli_installed()
             assert result is expected_result
     else:
-        with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+        with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
             process_mock = AsyncMock()
             process_mock.returncode = returncode
             process_mock.communicate.return_value = (stdout, stderr)
@@ -223,7 +223,7 @@ async def test_check_aws_cli_installed(returncode, stdout, stderr, exception, ex
             assert result is expected_result
 
             if returncode == 0:  # Only verify call args for success case to avoid redundancy
-                mock_subprocess.assert_called_once_with("aws --version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                mock_subprocess.assert_called_once_with("aws", "--version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
 
 @pytest.mark.asyncio
@@ -437,7 +437,7 @@ async def test_execute_pipe_command_large_output():
 @pytest.mark.asyncio
 async def test_execute_aws_command_exit_codes(exit_code, stderr, expected_status, expected_msg):
     """Test handling of different process exit codes and stderr output."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         process_mock = AsyncMock()
         process_mock.returncode = exit_code
         stdout = b"Command output" if exit_code == 0 else b""

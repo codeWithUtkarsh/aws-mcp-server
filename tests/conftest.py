@@ -50,7 +50,7 @@ async def aws_s3_bucket(ensure_aws_credentials):
     import time
     import uuid
 
-    from aws_mcp_server.server import execute_command
+    from aws_mcp_server.server import aws_cli_pipeline
 
     print("AWS S3 bucket fixture called")
 
@@ -74,7 +74,7 @@ async def aws_s3_bucket(ensure_aws_credentials):
         # Create the bucket with region specified
         create_cmd = f"aws s3 mb s3://{bucket_name} --region {region}"
         print(f"Creating bucket with command: {create_cmd}")
-        result = await execute_command(command=create_cmd, timeout=None, ctx=None)
+        result = await aws_cli_pipeline(command=create_cmd, timeout=None, ctx=None)
         if result["status"] != "success":
             print(f"Failed to create bucket: {result['output']}")
             pytest.skip(f"Failed to create test bucket: {result['output']}")
@@ -93,10 +93,10 @@ async def aws_s3_bucket(ensure_aws_credentials):
         try:
             # First remove all objects
             print("Removing objects from bucket")
-            await execute_command(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
+            await aws_cli_pipeline(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
             # Then delete the bucket
             print("Deleting bucket")
-            await execute_command(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+            await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
             print("Bucket cleanup complete")
         except Exception as e:
             print(f"Warning: Error cleaning up test bucket: {e}")

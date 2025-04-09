@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aws_mcp_server.server import describe_command, execute_command, mcp
+from aws_mcp_server.server import aws_cli_help, aws_cli_pipeline, mcp
 
 # Enable debug logging for tests
 logging.basicConfig(level=logging.DEBUG)
@@ -60,13 +60,13 @@ class TestServerIntegration:
         ],
     )
     @patch("aws_mcp_server.server.get_command_help")
-    async def test_describe_command_integration(self, mock_get_help, mock_aws_environment, service, command, mock_response, expected_content):
-        """Test the describe_command functionality with table-driven tests."""
+    async def test_aws_cli_help_integration(self, mock_get_help, mock_aws_environment, service, command, mock_response, expected_content):
+        """Test the aws_cli_help functionality with table-driven tests."""
         # Configure the mock response
         mock_get_help.return_value = mock_response
 
-        # Call the describe_command function
-        result = await describe_command(service=service, command=command, ctx=None)
+        # Call the aws_cli_help function
+        result = await aws_cli_help(service=service, command=command, ctx=None)
 
         # Verify the results
         assert "help_text" in result
@@ -113,13 +113,13 @@ class TestServerIntegration:
         ],
     )
     @patch("aws_mcp_server.server.execute_aws_command")
-    async def test_execute_command_scenarios(self, mock_execute, mock_aws_environment, command, mock_response, expected_result, timeout):
-        """Test execute_command with various scenarios using table-driven tests."""
+    async def test_aws_cli_pipeline_scenarios(self, mock_execute, mock_aws_environment, command, mock_response, expected_result, timeout):
+        """Test aws_cli_pipeline with various scenarios using table-driven tests."""
         # Configure the mock response
         mock_execute.return_value = mock_response
 
-        # Call the execute_command function
-        result = await execute_command(command=command, timeout=timeout, ctx=None)
+        # Call the aws_cli_pipeline function
+        result = await aws_cli_pipeline(command=command, timeout=timeout, ctx=None)
 
         # Verify status
         assert result["status"] == expected_result["status"]

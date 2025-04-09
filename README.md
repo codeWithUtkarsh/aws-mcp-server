@@ -5,7 +5,6 @@
 [![Linter: Ruff](https://img.shields.io/badge/Linter-Ruff-brightgreen?style=flat-square)](https://github.com/alexei-led/aws-mcp-server)
 [![Image Tags](https://ghcr-badge.egpl.dev/alexei-led/aws-mcp-server/tags?color=%2344cc11&ignore=latest&n=4&label=image+tags&trim=)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server/versions)
 [![Image Size](https://ghcr-badge.egpl.dev/alexei-led/aws-mcp-server/size?color=%2344cc11&tag=latest&label=image+size&trim=)](https://github.com/alexei-led/aws-mcp-server/pkgs/container/aws-mcp-server)
-[![smithery badge](https://smithery.ai/badge/@alexei-led/aws-mcp-server)](https://smithery.ai/server/@alexei-led/aws-mcp-server)
 
 A lightweight service that enables AI assistants to execute AWS CLI commands through the Model Context Protocol (MCP).
 
@@ -13,8 +12,8 @@ A lightweight service that enables AI assistants to execute AWS CLI commands thr
 
 The AWS MCP Server provides a bridge between MCP-aware AI assistants (like Claude Desktop, Cursor, Windsurf) and the AWS CLI. It enables these assistants to:
 
-1. **Retrieve AWS CLI documentation** - Get detailed help on AWS services and commands
-2. **Execute AWS CLI commands** - Run commands and receive formatted results optimized for AI consumption
+1. **Retrieve AWS CLI documentation** (`aws_cli_help`) - Get detailed help on AWS services and commands
+2. **Execute AWS CLI commands** (`aws_cli_pipeline`) - Run commands with Unix pipes and receive formatted results optimized for AI consumption
 
 ```mermaid
 flowchart LR
@@ -46,6 +45,8 @@ The video demonstrates using Claude Desktop with AWS MCP Server to create a new 
 
 ## Getting Started
 
+**Note:** For security and reliability, running the server inside a Docker container is the **strongly recommended** method. Please review the [Security Considerations](#security-considerations) section for important considerations.
+
 ### Run Server Option 1: Using Docker (Recommended)
 
 ```bash
@@ -73,9 +74,11 @@ The Docker image supports both AMD64/x86_64 (Intel/AMD) and ARM64 (Apple Silicon
 >
 > - `latest`: Latest stable release
 > - `x.y.z` (e.g., `1.0.0`): Specific version
-> - `sha-abc123`: Development builds, tagged with Git commit SHA
+> - `sha-<commit-sha>`: Development builds, tagged with Git commit SHA (e.g., `sha-gb697684`)
 
 ### Run Server Option 2: Using Python
+
+**Use with Caution:** Running natively requires careful environment setup and carries higher security risks compared to the recommended Docker deployment. Ensure you understand the implications outlined in the [Security Considerations](#security-considerations) section.
 
 ```bash
 # Clone repository
@@ -105,19 +108,56 @@ The AWS MCP Server can be configured using environment variables:
 | `AWS_PROFILE`        | AWS profile to use                           | default   |
 | `AWS_REGION`         | AWS region to use                            | us-east-1 |
 
+**Important:** Securely manage the AWS credentials provided to the server, whether via mounted `~/.aws` files or environment variables. Ensure the credentials follow the principle of least privilege as detailed in the [Security Considerations](#security-considerations) section. When running via Docker, ensure these variables are passed correctly to the container environment (e.g., using `docker run -e VAR=value ...`).
+
+## Security Considerations
+
+Security is paramount when executing commands against your AWS environment. While AWS MCP Server provides functionality, **you are responsible** for configuring and running it securely. Please adhere strictly to the following:
+
+**1. Recommended Deployment: Docker Container**
+
+*   **Isolation:** Running the server inside a Docker container is the **strongly recommended and default** deployment method. Containerization provides crucial filesystem and process isolation. Potentially destructive Unix commands (like `rm`, `mv`) executed via pipes, even if misused, will be contained within the ephemeral Docker environment and will **not** affect your host machine's filesystem. The container can be easily stopped and recreated.
+*   **Controlled Environment:** Docker ensures a consistent environment with necessary dependencies, reducing unexpected behavior.
+
+**2. AWS Credentials and IAM Least Privilege (Critical)**
+
+*   **User Responsibility:** You provide the AWS credentials to the server (via mounted `~/.aws` or environment variables).
+*   **Least Privilege is Essential:** The server executes AWS CLI commands *using the credentials you provide*. It is **absolutely critical** that these credentials belong to an IAM principal (User or Role) configured with the **minimum necessary permissions** (least privilege) for *only* the AWS actions you intend to perform through this tool.
+    *   **Do Not Use Root Credentials:** Never use AWS account root user credentials.
+    *   **Regularly Review Permissions:** Periodically audit the IAM permissions associated with the credentials.
+*   **Impact Limitation:** Properly configured IAM permissions are the **primary mechanism** for limiting the potential impact of *any* command executed via the server, whether intended or unintended. Even if a command were manipulated, it could only perform actions allowed by the specific IAM policy.
+
+**3. Trusted User Model**
+
+*   The server assumes the end-user interacting with the MCP client (e.g., Claude Desktop, Cursor) is the **same trusted individual** who configured the server and provided the least-privilege AWS credentials. Do not expose the server or connected client to untrusted users.
+
+**4. Understanding Execution Risks (Current Implementation)**
+
+*   **Command Execution:** The current implementation uses shell features (`shell=True` in subprocess calls) to execute AWS commands and handle Unix pipes. While convenient, this approach carries inherent risks if the input command string were manipulated (command injection).
+*   **Mitigation via Operational Controls:** In the context of the **trusted user model** and **Docker deployment**, these risks are mitigated operationally:
+    *   The trusted user is assumed not to provide intentionally malicious commands against their own environment.
+    *   Docker contains filesystem side-effects.
+    *   **Crucially, IAM least privilege limits the scope of *any* AWS action that could be executed.**
+*   **Credential Exfiltration Risk:** Despite containerization and IAM, a sophisticated command injection could potentially attempt to read the mounted credentials (`~/.aws`) or environment variables within the container and exfiltrate them (e.g., via `curl`). **Strict IAM policies remain the most vital defense** to limit the value of potentially exfiltrated credentials.
+
+**5. Network Exposure (SSE Transport)**
+
+*   If using the `sse` transport (which implies a network listener), ensure you bind the server only to trusted network interfaces (e.g., `localhost`) or implement appropriate network security controls (firewalls, authentication proxies) if exposing it more broadly. The default `stdio` transport does not open network ports.
+
+**6. Shared Responsibility Summary**
+
+*   **AWS MCP Server provides the tool.**
+*   **You, the user, are responsible for:**
+    *   Running it within the recommended secure Docker environment.
+    *   Providing and securely managing **least-privilege** AWS credentials.
+    *   Ensuring only trusted users interact with the server/client.
+    *   Securing the network environment if applicable.
+
+By strictly adhering to Docker deployment and meticulous IAM least-privilege configuration, you establish the necessary operational controls for using the AWS MCP Server securely with its current implementation.
+
 ## Integrating with Claude Desktop
 
-### Option 1: Using Smithery (Easiest)
-
-The simplest way to install and configure AWS MCP Server for Claude Desktop is via [Smithery](https://smithery.ai/server/@alexei-led/aws-mcp-server):
-
-```bash
-npx -y @smithery/cli install @alexei-led/aws-mcp-server --client claude
-```
-
-This command will automatically configure Claude Desktop to use AWS MCP Server.
-
-### Option 2: Manual Configuration
+### Configuration
 
 To manually integrate AWS MCP Server with Claude Desktop:
 
@@ -143,7 +183,7 @@ To manually integrate AWS MCP Server with Claude Desktop:
      }
    }
    ```
-
+   
 3. **Restart Claude Desktop** to apply the changes
    - After restarting, you should see a hammer 🔨 icon in the bottom right corner of the input box
    - This indicates that the AWS MCP Server is available for use
@@ -399,12 +439,14 @@ pytest --run-integration -m integration
 
 ## Why Deploy with Docker
 
+Deploying AWS MCP Server via Docker is the recommended approach, offering significant security and reliability advantages that form the core of the tool's secure usage pattern:
+
 ### Security Benefits
 
-- **Isolation**: The Docker container provides complete isolation - AWS CLI commands and utilities run in a contained environment, not directly on your local machine
-- **Controlled Access**: The container only has read-only access to your AWS credentials
-- **No Local Installation**: Avoid installing AWS CLI and supporting tools directly on your host system
-- **Clean Environment**: Each container run starts with a pristine, properly configured environment
+- **Isolation (Primary Mitigation):** The Docker container provides essential filesystem and process isolation. AWS CLI commands and piped Unix utilities run in a contained environment. Accidental or misused commands affecting the filesystem are limited to the container, **protecting your host machine**.
+- **Controlled Credential Access:** When mounting credentials, using the `:ro` (read-only) flag limits the container's ability to modify your AWS configuration files.
+- **No Local Installation:** Avoids installing the AWS CLI and its dependencies directly on your host system.
+- **Clean Environment:** Each container run starts with a known, clean state.
 
 ### Reliability Advantages
 
