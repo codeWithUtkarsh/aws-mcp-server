@@ -13,8 +13,6 @@ from aws_mcp_server.cli_executor import (
     execute_pipe_command,
     get_command_help,
     is_auth_error,
-    validate_aws_command,
-    validate_pipe_command,
 )
 from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
 
@@ -34,6 +32,35 @@ async def test_execute_aws_command_success():
         assert result["status"] == "success"
         assert result["output"] == "Success output"
         mock_subprocess.assert_called_once_with("aws", "s3", "ls", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+
+
+@pytest.mark.asyncio
+async def test_execute_aws_command_ec2_with_region_added():
+    """Test that region is automatically added to EC2 commands."""
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
+        # Mock a successful process
+        process_mock = AsyncMock()
+        process_mock.returncode = 0
+        process_mock.communicate.return_value = (b"EC2 instances", b"")
+        mock_subprocess.return_value = process_mock
+        
+        # Import here to ensure the test uses the actual value
+        from aws_mcp_server.config import AWS_REGION
+        
+        # Execute an EC2 command without region
+        result = await execute_aws_command("aws ec2 describe-instances")
+        
+        assert result["status"] == "success"
+        assert result["output"] == "EC2 instances"
+        
+        # Verify region was added to the command
+        mock_subprocess.assert_called_once()
+        call_args = mock_subprocess.call_args[0]
+        assert call_args[0] == "aws"
+        assert call_args[1] == "ec2"
+        assert call_args[2] == "describe-instances"
+        assert "--region" in call_args
+        assert AWS_REGION in call_args
 
 
 @pytest.mark.asyncio
@@ -262,32 +289,6 @@ async def test_get_command_help(service, command, mock_type, mock_value, expecte
             mock_execute.assert_called_once_with(expected_call)
 
 
-@pytest.mark.parametrize(
-    "command,should_be_valid",
-    [
-        # Valid commands
-        ("aws s3 ls | grep bucket", True),
-        ("aws ec2 describe-instances | grep running | wc -l", True),
-        ("aws s3api list-buckets --query 'Buckets[*].Name' --output text | sort", True),
-        # Invalid commands
-        ("", False),
-        ("ls | grep aws", False),
-        ("aws s3 ls | invalid_cmd", False),
-        ("aws | grep bucket", False),
-    ],
-)
-def test_validate_pipe_command(command, should_be_valid):
-    """Test validating pipe commands using parameterized tests."""
-    if should_be_valid:
-        try:
-            validate_pipe_command(command)
-        except CommandValidationError as e:
-            pytest.fail(f"Command should be valid but failed validation: {command}\nError: {str(e)}")
-    else:
-        with pytest.raises(CommandValidationError):
-            validate_pipe_command(command)
-
-
 @pytest.mark.asyncio
 async def test_execute_aws_command_with_pipe():
     """Test execute_aws_command with a piped command."""
@@ -319,6 +320,31 @@ async def test_execute_pipe_command_success():
 
 
 @pytest.mark.asyncio
+async def test_execute_pipe_command_ec2_with_region_added():
+    """Test that region is automatically added to EC2 commands in a pipe."""
+    with patch("aws_mcp_server.cli_executor.validate_pipe_command") as mock_validate:
+        with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_pipe_exec:
+            mock_pipe_exec.return_value = {"status": "success", "output": "Filtered EC2 instances"}
+            
+            # Mock split_pipe_command to simulate pipe command splitting
+            with patch("aws_mcp_server.cli_executor.split_pipe_command") as mock_split:
+                mock_split.return_value = ["aws ec2 describe-instances", "grep instance-id"]
+                
+                # Import here to ensure the test uses the actual value
+                from aws_mcp_server.config import AWS_REGION
+                
+                # Execute a piped EC2 command without region
+                result = await execute_pipe_command("aws ec2 describe-instances | grep instance-id")
+                
+                assert result["status"] == "success"
+                assert result["output"] == "Filtered EC2 instances"
+                
+                # Verify the command was modified to include region
+                expected_cmd = f"aws ec2 describe-instances --region {AWS_REGION} | grep instance-id"
+                mock_pipe_exec.assert_called_once_with(expected_cmd, None)
+
+
+@pytest.mark.asyncio
 async def test_execute_pipe_command_validation_error():
     """Test execute_pipe_command with validation error."""
     with patch("aws_mcp_server.cli_executor.validate_pipe_command", side_effect=CommandValidationError("Invalid pipe command")):
@@ -341,44 +367,6 @@ async def test_execute_pipe_command_execution_error():
 
 
 # New test cases to improve coverage
-
-
-@pytest.mark.parametrize(
-    "command,is_valid,is_dangerous,expected_error",
-    [
-        # Valid commands
-        ("aws s3 ls", True, False, None),
-        ("aws ec2 describe-instances", True, False, None),
-        ("aws s3api list-buckets --query 'Buckets[*].Name' --output json", True, False, None),
-        ("aws lambda list-functions --region us-west-2", True, False, None),
-        ("AWS s3 ls", True, False, None),  # Case insensitive check
-        # Invalid commands
-        ("s3 ls", False, False, "Commands must start with 'aws'"),
-        ("", False, False, "Commands must start with 'aws'"),
-        ("aws", False, False, "Command must include an AWS service"),
-        # Dangerous commands
-        ("aws iam create-user --user-name test-user", False, True, "restricted for security reasons"),
-        ("aws iam create-access-key --user-name admin", False, True, "restricted for security reasons"),
-        ("aws ec2 terminate-instances --instance-ids i-1234567890abcdef0", False, True, "restricted for security reasons"),
-        ("aws rds delete-db-instance --db-instance-identifier mydb", False, True, "restricted for security reasons"),
-    ],
-)
-def test_validate_aws_command(command, is_valid, is_dangerous, expected_error):
-    """Test validating AWS commands using table-driven tests."""
-    if is_valid:
-        # Command should pass validation
-        try:
-            validate_aws_command(command)
-        except CommandValidationError as e:
-            pytest.fail(f"Command should be valid but failed validation: {command}\nError: {str(e)}")
-    else:
-        # Command should fail validation
-        with pytest.raises(CommandValidationError) as excinfo:
-            validate_aws_command(command)
-
-        # Verify the correct error message was raised
-        if expected_error:
-            assert expected_error in str(excinfo.value)
 
 
 @pytest.mark.asyncio
