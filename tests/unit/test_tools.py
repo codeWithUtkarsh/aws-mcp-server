@@ -74,30 +74,64 @@ def test_split_pipe_command():
 @pytest.mark.asyncio
 async def test_execute_piped_command_success():
     """Test successful execution of a piped command."""
-    # For piped commands, we still need to use create_subprocess_shell since we're executing a shell pipeline
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
-        # Mock a successful process
-        process_mock = AsyncMock()
-        process_mock.returncode = 0
-        process_mock.communicate.return_value = (b"Filtered output", b"")
-        mock_subprocess.return_value = process_mock
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
+        # Mock the first process in the pipe
+        first_process_mock = AsyncMock()
+        first_process_mock.returncode = 0
+        first_process_mock.communicate.return_value = (b"S3 output", b"")
+
+        # Mock the second process in the pipe
+        second_process_mock = AsyncMock()
+        second_process_mock.returncode = 0
+        second_process_mock.communicate.return_value = (b"Filtered output", b"")
+
+        # Set up the mock to return different values on subsequent calls
+        mock_subprocess.side_effect = [first_process_mock, second_process_mock]
 
         result = await execute_piped_command("aws s3 ls | grep bucket")
 
         assert result["status"] == "success"
         assert result["output"] == "Filtered output"
-        mock_subprocess.assert_called_once_with("aws s3 ls | grep bucket", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+
+        # Verify first command was called with correct args
+        mock_subprocess.assert_any_call("aws", "s3", "ls", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+
+        # Verify second command was called with correct args
+        mock_subprocess.assert_any_call("grep", "bucket", stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
 
 @pytest.mark.asyncio
-async def test_execute_piped_command_error():
-    """Test error handling in execute_piped_command."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
-        # Mock a failed process
+async def test_execute_piped_command_error_first_command():
+    """Test error handling in execute_piped_command when first command fails."""
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
+        # Mock a failed first process
         process_mock = AsyncMock()
         process_mock.returncode = 1
-        process_mock.communicate.return_value = (b"", b"Command not found: xyz")
+        process_mock.communicate.return_value = (b"", b"Command failed: aws")
         mock_subprocess.return_value = process_mock
+
+        result = await execute_piped_command("aws s3 ls | grep bucket")
+
+        assert result["status"] == "error"
+        assert "Command failed: aws" in result["output"]
+
+
+@pytest.mark.asyncio
+async def test_execute_piped_command_error_second_command():
+    """Test error handling in execute_piped_command when second command fails."""
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
+        # Mock the first process in the pipe (success)
+        first_process_mock = AsyncMock()
+        first_process_mock.returncode = 0
+        first_process_mock.communicate.return_value = (b"S3 output", b"")
+
+        # Mock the second process in the pipe (failure)
+        second_process_mock = AsyncMock()
+        second_process_mock.returncode = 1
+        second_process_mock.communicate.return_value = (b"", b"Command not found: xyz")
+
+        # Set up the mock to return different values on subsequent calls
+        mock_subprocess.side_effect = [first_process_mock, second_process_mock]
 
         result = await execute_piped_command("aws s3 ls | xyz")
 
@@ -108,7 +142,7 @@ async def test_execute_piped_command_error():
 @pytest.mark.asyncio
 async def test_execute_piped_command_timeout():
     """Test timeout handling in execute_piped_command."""
-    with patch("asyncio.create_subprocess_shell", new_callable=AsyncMock) as mock_subprocess:
+    with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a process that times out
         process_mock = AsyncMock()
         # Use a properly awaitable mock that raises TimeoutError
@@ -128,7 +162,7 @@ async def test_execute_piped_command_timeout():
 @pytest.mark.asyncio
 async def test_execute_piped_command_exception():
     """Test general exception handling in execute_piped_command."""
-    with patch("asyncio.create_subprocess_shell", side_effect=Exception("Test exception")):
+    with patch("asyncio.create_subprocess_exec", side_effect=Exception("Test exception")):
         result = await execute_piped_command("aws s3 ls | grep bucket")
 
         assert result["status"] == "error"
