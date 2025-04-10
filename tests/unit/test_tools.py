@@ -174,7 +174,7 @@ async def test_execute_piped_command_exception():
 async def test_execute_piped_command_empty_command():
     """Test handling of empty commands."""
     result = await execute_piped_command("")
-    
+
     assert result["status"] == "error"
     assert "Empty command" in result["output"]
 
@@ -186,11 +186,11 @@ async def test_execute_piped_command_timeout_during_final_wait():
     with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
         with patch("aws_mcp_server.tools.split_pipe_command") as mock_split:
             mock_split.return_value = ["aws s3 ls", "grep bucket"]
-            
+
             # We don't need to mock the subprocess - it won't reach that point
             # because wait_for will raise a TimeoutError first
             result = await execute_piped_command("aws s3 ls | grep bucket", timeout=5)
-            
+
             assert result["status"] == "error"
             assert "Command timed out after 5 seconds" in result["output"]
 
@@ -204,9 +204,9 @@ async def test_execute_piped_command_kill_error_during_timeout():
         process_mock.communicate.side_effect = asyncio.TimeoutError()
         process_mock.kill = MagicMock(side_effect=Exception("Failed to kill process"))
         mock_subprocess.return_value = process_mock
-        
+
         result = await execute_piped_command("aws s3 ls", timeout=1)
-        
+
         assert result["status"] == "error"
         assert "Command timed out after 1 seconds" in result["output"]
         process_mock.kill.assert_called_once()
@@ -216,19 +216,19 @@ async def test_execute_piped_command_kill_error_during_timeout():
 async def test_execute_piped_command_large_output():
     """Test output truncation in execute_piped_command."""
     from aws_mcp_server.config import MAX_OUTPUT_SIZE
-    
+
     with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess:
         # Mock a process with large output
         process_mock = AsyncMock()
         process_mock.returncode = 0
-        
+
         # Generate output larger than MAX_OUTPUT_SIZE
         large_output = "x" * (MAX_OUTPUT_SIZE + 1000)
         process_mock.communicate.return_value = (large_output.encode("utf-8"), b"")
         mock_subprocess.return_value = process_mock
-        
+
         result = await execute_piped_command("aws s3 ls")
-        
+
         assert result["status"] == "success"
         assert len(result["output"]) <= MAX_OUTPUT_SIZE + 100  # Allow for truncation message
         assert "output truncated" in result["output"]

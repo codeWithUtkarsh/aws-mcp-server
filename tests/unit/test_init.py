@@ -13,29 +13,30 @@ class TestInitModule(unittest.TestCase):
         with patch("importlib.metadata.version", return_value="1.2.3"):
             # Import the module fresh to apply the patch
             import aws_mcp_server
-            
+
             # Reload to apply our patch
             reload(aws_mcp_server)
-            
+
             # Check that __version__ is set correctly
             self.assertEqual(aws_mcp_server.__version__, "1.2.3")
-    
+
     def test_version_fallback_on_package_not_found(self):
         """Test handling of PackageNotFoundError."""
         from importlib.metadata import PackageNotFoundError
-        
+
         # Looking at the actual implementation, when PackageNotFoundError is raised,
         # it just uses 'pass', so the attribute __version__ may or may not be set.
         # If it was previously set (which is likely), it will retain its previous value.
         with patch("importlib.metadata.version", side_effect=PackageNotFoundError):
             # Create a fresh module
             import sys
+
             if "aws_mcp_server" in sys.modules:
                 del sys.modules["aws_mcp_server"]
-                
+
             # Import the module fresh with our patch
             import aws_mcp_server
-            
+
             # In this case, the __version__ may not even be set
             # We're just testing that the code doesn't crash with PackageNotFoundError
             # Our test should pass regardless of whether __version__ is set

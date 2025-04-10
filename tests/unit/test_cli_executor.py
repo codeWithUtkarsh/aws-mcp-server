@@ -43,16 +43,16 @@ async def test_execute_aws_command_ec2_with_region_added():
         process_mock.returncode = 0
         process_mock.communicate.return_value = (b"EC2 instances", b"")
         mock_subprocess.return_value = process_mock
-        
+
         # Import here to ensure the test uses the actual value
         from aws_mcp_server.config import AWS_REGION
-        
+
         # Execute an EC2 command without region
         result = await execute_aws_command("aws ec2 describe-instances")
-        
+
         assert result["status"] == "success"
         assert result["output"] == "EC2 instances"
-        
+
         # Verify region was added to the command
         mock_subprocess.assert_called_once()
         call_args = mock_subprocess.call_args[0]
@@ -325,20 +325,20 @@ async def test_execute_pipe_command_ec2_with_region_added():
     with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
         with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_pipe_exec:
             mock_pipe_exec.return_value = {"status": "success", "output": "Filtered EC2 instances"}
-            
+
             # Mock split_pipe_command to simulate pipe command splitting
             with patch("aws_mcp_server.cli_executor.split_pipe_command") as mock_split:
                 mock_split.return_value = ["aws ec2 describe-instances", "grep instance-id"]
-                
+
                 # Import here to ensure the test uses the actual value
                 from aws_mcp_server.config import AWS_REGION
-                
+
                 # Execute a piped EC2 command without region
                 result = await execute_pipe_command("aws ec2 describe-instances | grep instance-id")
-                
+
                 assert result["status"] == "success"
                 assert result["output"] == "Filtered EC2 instances"
-                
+
                 # Verify the command was modified to include region
                 expected_cmd = f"aws ec2 describe-instances --region {AWS_REGION} | grep instance-id"
                 mock_pipe_exec.assert_called_once_with(expected_cmd, None)
