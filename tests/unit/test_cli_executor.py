@@ -322,7 +322,7 @@ async def test_execute_pipe_command_success():
 @pytest.mark.asyncio
 async def test_execute_pipe_command_ec2_with_region_added():
     """Test that region is automatically added to EC2 commands in a pipe."""
-    with patch("aws_mcp_server.cli_executor.validate_pipe_command") as mock_validate:
+    with patch("aws_mcp_server.cli_executor.validate_pipe_command"):
         with patch("aws_mcp_server.cli_executor.execute_piped_command", new_callable=AsyncMock) as mock_pipe_exec:
             mock_pipe_exec.return_value = {"status": "success", "output": "Filtered EC2 instances"}
             

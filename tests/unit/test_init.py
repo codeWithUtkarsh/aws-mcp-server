@@ -42,7 +42,7 @@ class TestInitModule(unittest.TestCase):
             # The important part is that the exception is handled
             try:
                 # This could raise AttributeError
-                value = aws_mcp_server.__version__
+                _ = aws_mcp_server.__version__
                 # If we get here, it's set to something - hard to assert exactly what
                 # Just ensure no exception was thrown
                 self.assertTrue(True)

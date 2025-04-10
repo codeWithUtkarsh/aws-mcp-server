@@ -183,7 +183,7 @@ async def test_execute_piped_command_empty_command():
 async def test_execute_piped_command_timeout_during_final_wait():
     """Test timeout handling during wait for the final command in a pipe."""
     # This test directly tests the branch where a timeout occurs during awaiting the final command
-    with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()) as mock_wait_for:
+    with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
         with patch("aws_mcp_server.tools.split_pipe_command") as mock_split:
             mock_split.return_value = ["aws s3 ls", "grep bucket"]
             
