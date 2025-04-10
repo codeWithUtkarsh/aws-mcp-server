@@ -9,6 +9,8 @@ Environment variables:
 - AWS_PROFILE: AWS profile to use (default: "default")
 - AWS_REGION: AWS region to use (default: "us-east-1")
 - AWS_DEFAULT_REGION: Alternative to AWS_REGION (used if AWS_REGION not set)
+- AWS_MCP_SECURITY_MODE: Security mode for command validation (strict or permissive, default: strict)
+- AWS_MCP_SECURITY_CONFIG: Path to custom security configuration file
 """
 
 import os
@@ -24,6 +26,10 @@ TRANSPORT = os.environ.get("AWS_MCP_TRANSPORT", "stdio")
 # AWS CLI settings
 AWS_PROFILE = os.environ.get("AWS_PROFILE", "default")
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+
+# Security settings
+SECURITY_MODE = os.environ.get("AWS_MCP_SECURITY_MODE", "strict")
+SECURITY_CONFIG_PATH = os.environ.get("AWS_MCP_SECURITY_CONFIG", "")
 
 # Instructions displayed to client during initialization
 INSTRUCTIONS = """

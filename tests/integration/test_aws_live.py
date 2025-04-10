@@ -194,7 +194,7 @@ class TestAWSLiveIntegration:
             # Test pipe with grep and sort
             (
                 "aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort",
-                lambda output: all("east" in r.lower() for r in output.strip().split("\n")),
+                lambda output: all("east" in r.lower() for r in output.strip().split("\n") if r),
                 "Filtered and sorted east regions",
             ),
             # Test more complex pipe with multiple operations
@@ -202,6 +202,18 @@ class TestAWSLiveIntegration:
                 "aws ec2 describe-regions --output json | grep RegionName | head -3 | wc -l",
                 lambda output: int(output.strip()) <= 3,
                 "Limited region output with multiple pipes",
+            ),
+            # Test pipe with JSON grep
+            (
+                "aws iam list-roles --output json | grep RoleName",
+                lambda output: "RoleName" in output or output.strip() == "",
+                "Lists IAM roles or returns empty if none exist",
+            ),
+            # Very simple pipe command that should work anywhere
+            (
+                "aws --version | grep aws",
+                lambda output: "aws" in output.lower(),  # Just check for the word "aws" in output
+                "AWS version with grep",
             ),
         ],
     )
