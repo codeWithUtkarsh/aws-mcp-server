@@ -47,6 +47,10 @@ def test_is_pipe_command():
     assert not is_pipe_command("aws s3 ls 's3://my-bucket/file|other'")
     assert not is_pipe_command('aws ec2 run-instances --user-data "echo hello | grep world"')
 
+    # Test commands with escaped quotes - these should not confuse the parser
+    assert is_pipe_command('aws s3 ls --query "Name=\\"value\\"" | grep bucket')
+    assert not is_pipe_command('aws s3 ls "s3://my-bucket/file\\"|other"')
+
 
 def test_split_pipe_command():
     """Test the split_pipe_command function."""
@@ -69,6 +73,16 @@ def test_split_pipe_command():
     cmd = 'aws s3 ls "s3://bucket/file|name" | grep "pattern|other"'
     result = split_pipe_command(cmd)
     assert result == ['aws s3 ls "s3://bucket/file|name"', 'grep "pattern|other"']
+
+    # Test with escaped quotes
+    cmd = 'aws s3 ls --query "Name=\\"value\\"" | grep bucket'
+    result = split_pipe_command(cmd)
+    assert result == ['aws s3 ls --query "Name=\\"value\\""', "grep bucket"]
+
+    # Test with escaped pipe symbol in quotes
+    cmd = 'aws s3 ls "s3://bucket/file\\"|name" | grep pattern'
+    result = split_pipe_command(cmd)
+    assert result == ['aws s3 ls "s3://bucket/file\\"|name"', "grep pattern"]
 
 
 @pytest.mark.asyncio

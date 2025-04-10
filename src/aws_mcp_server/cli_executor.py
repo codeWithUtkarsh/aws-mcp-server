@@ -64,6 +64,13 @@ def is_auth_error(error_output: str) -> bool:
         "AuthFailure",
         "The security token included in the request is invalid",
         "The config profile could not be found",
+        "UnrecognizedClientException",
+        "InvalidClientTokenId",
+        "InvalidAccessKeyId",
+        "SignatureDoesNotMatch",
+        "Your credential profile is not properly configured",
+        "credentials could not be refreshed",
+        "NoCredentialProviders",
     ]
     return any(pattern in error_output for pattern in auth_error_patterns)
 
@@ -123,8 +130,13 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
     # Check if the command needs a region and doesn't have one specified
     from aws_mcp_server.config import AWS_REGION
 
+    # Split by spaces and check for EC2 service specifically
+    cmd_parts = shlex.split(command)
+    is_ec2_command = len(cmd_parts) >= 2 and cmd_parts[0] == "aws" and cmd_parts[1] == "ec2"
+    has_region = "--region" in cmd_parts
+
     # If it's an EC2 command and doesn't have --region
-    if " ec2 " in command and " --region " not in command:
+    if is_ec2_command and not has_region:
         # Add the region parameter
         command = f"{command} --region {AWS_REGION}"
         logger.debug(f"Added region to command: {command}")
@@ -206,12 +218,18 @@ async def execute_pipe_command(pipe_command: str, timeout: int | None = None) ->
     from aws_mcp_server.config import AWS_REGION
 
     commands = split_pipe_command(pipe_command)
-    if commands and " ec2 " in commands[0] and " --region " not in commands[0]:
-        # Add the region parameter to the first command
-        commands[0] = f"{commands[0]} --region {AWS_REGION}"
-        # Rebuild the pipe command
-        pipe_command = " | ".join(commands)
-        logger.debug(f"Added region to piped command: {pipe_command}")
+    if commands:
+        # Split first command by spaces to check for EC2 service specifically
+        first_cmd_parts = shlex.split(commands[0])
+        is_ec2_command = len(first_cmd_parts) >= 2 and first_cmd_parts[0] == "aws" and first_cmd_parts[1] == "ec2"
+        has_region = "--region" in first_cmd_parts
+
+        if is_ec2_command and not has_region:
+            # Add the region parameter to the first command
+            commands[0] = f"{commands[0]} --region {AWS_REGION}"
+            # Rebuild the pipe command
+            pipe_command = " | ".join(commands)
+            logger.debug(f"Added region to piped command: {pipe_command}")
 
     logger.debug(f"Executing piped command: {pipe_command}")
 

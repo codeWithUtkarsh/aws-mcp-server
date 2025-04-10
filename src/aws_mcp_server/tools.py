@@ -109,17 +109,26 @@ def is_pipe_command(command: str) -> bool:
     Returns:
         True if the command contains a pipe operator, False otherwise
     """
-    # Simple check for pipe operator that's not inside quotes
+    # Check for pipe operator that's not inside quotes
     in_single_quote = False
     in_double_quote = False
+    escaped = False
 
-    for i, char in enumerate(command):
-        if char == "'" and (i == 0 or command[i - 1] != "\\"):
-            in_single_quote = not in_single_quote
-        elif char == '"' and (i == 0 or command[i - 1] != "\\"):
-            in_double_quote = not in_double_quote
-        elif char == "|" and not in_single_quote and not in_double_quote:
-            return True
+    for _, char in enumerate(command):
+        # Handle escape sequences
+        if char == "\\" and not escaped:
+            escaped = True
+            continue
+
+        if not escaped:
+            if char == "'" and not in_double_quote:
+                in_single_quote = not in_single_quote
+            elif char == '"' and not in_single_quote:
+                in_double_quote = not in_double_quote
+            elif char == "|" and not in_single_quote and not in_double_quote:
+                return True
+
+        escaped = False
 
     return False
 
@@ -137,19 +146,31 @@ def split_pipe_command(pipe_command: str) -> List[str]:
     current_command = ""
     in_single_quote = False
     in_double_quote = False
+    escaped = False
 
-    for i, char in enumerate(pipe_command):
-        if char == "'" and (i == 0 or pipe_command[i - 1] != "\\"):
-            in_single_quote = not in_single_quote
+    for _, char in enumerate(pipe_command):
+        # Handle escape sequences
+        if char == "\\" and not escaped:
+            escaped = True
             current_command += char
-        elif char == '"' and (i == 0 or pipe_command[i - 1] != "\\"):
-            in_double_quote = not in_double_quote
-            current_command += char
-        elif char == "|" and not in_single_quote and not in_double_quote:
-            commands.append(current_command.strip())
-            current_command = ""
+            continue
+
+        if not escaped:
+            if char == "'" and not in_double_quote:
+                in_single_quote = not in_single_quote
+                current_command += char
+            elif char == '"' and not in_single_quote:
+                in_double_quote = not in_double_quote
+                current_command += char
+            elif char == "|" and not in_single_quote and not in_double_quote:
+                commands.append(current_command.strip())
+                current_command = ""
+            else:
+                current_command += char
         else:
+            # Add the escaped character
             current_command += char
+            escaped = False
 
     if current_command.strip():
         commands.append(current_command.strip())
