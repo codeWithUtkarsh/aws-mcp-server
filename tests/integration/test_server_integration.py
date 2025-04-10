@@ -162,34 +162,40 @@ class TestServerIntegration:
         expected_resources = ["aws://config/profiles", "aws://config/regions", "aws://config/environment", "aws://config/account"]
 
         # Test that resources are accessible through MCP client
-        resources = await mcp_client.resources_list()
+        resources = await mcp_client.list_resources()
 
         # Verify all expected resources are present
-        resource_uris = [r.uri for r in resources.resources]
+        resource_uris = [str(r.uri) for r in resources]
         for uri in expected_resources:
             assert uri in resource_uris, f"Resource {uri} not found in resources list"
 
         # Test accessing each resource by URI
         for uri in expected_resources:
-            resource = await mcp_client.resources_read(uri=uri)
+            resource = await mcp_client.read_resource(uri=uri)
             assert resource is not None, f"Failed to read resource {uri}"
 
+            # Resource is a list with one item that has a content attribute
+            # The content is a JSON string that needs to be parsed
+            import json
+
+            content = json.loads(resource[0].content)
+
             # Verify specific resource content
-            if uri == "aws_profiles":
-                assert "profiles" in resource.content
-                assert len(resource.content["profiles"]) == 3
-                assert any(p["name"] == "test-profile" and p["is_current"] for p in resource.content["profiles"])
+            if uri == "aws://config/profiles":
+                assert "profiles" in content
+                assert len(content["profiles"]) == 3
+                assert any(p["name"] == "test-profile" and p["is_current"] for p in content["profiles"])
 
-            elif uri == "aws_regions":
-                assert "regions" in resource.content
-                assert len(resource.content["regions"]) == 2
-                assert any(r["name"] == "us-west-2" and r["is_current"] for r in resource.content["regions"])
+            elif uri == "aws://config/regions":
+                assert "regions" in content
+                assert len(content["regions"]) == 2
+                assert any(r["name"] == "us-west-2" and r["is_current"] for r in content["regions"])
 
-            elif uri == "aws_environment":
-                assert resource.content["aws_profile"] == "test-profile"
-                assert resource.content["aws_region"] == "us-west-2"
-                assert resource.content["has_credentials"] is True
+            elif uri == "aws://config/environment":
+                assert content["aws_profile"] == "test-profile"
+                assert content["aws_region"] == "us-west-2"
+                assert content["has_credentials"] is True
 
-            elif uri == "aws_account":
-                assert resource.content["account_id"] == "123456789012"
-                assert resource.content["account_alias"] == "test-account"
+            elif uri == "aws://config/account":
+                assert content["account_id"] == "123456789012"
+                assert content["account_alias"] == "test-account"
