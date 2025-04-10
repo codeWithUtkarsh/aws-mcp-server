@@ -10,12 +10,12 @@ import shlex
 from typing import TypedDict
 
 from aws_mcp_server.config import DEFAULT_TIMEOUT, MAX_OUTPUT_SIZE
+from aws_mcp_server.security import validate_aws_command, validate_pipe_command
 from aws_mcp_server.tools import (
     CommandResult,
     execute_piped_command,
     is_pipe_command,
     split_pipe_command,
-    validate_unix_command,
 )
 
 # Configure module logger
@@ -86,57 +86,7 @@ async def check_aws_cli_installed() -> bool:
         return False
 
 
-def validate_aws_command(command: str) -> None:
-    """Validate that the command is a proper AWS CLI command.
-
-    Args:
-        command: The AWS CLI command to validate
-
-    Raises:
-        CommandValidationError: If the command is invalid
-    """
-    cmd_parts = shlex.split(command)
-    if not cmd_parts or cmd_parts[0].lower() != "aws":
-        raise CommandValidationError("Commands must start with 'aws'")
-
-    if len(cmd_parts) < 2:
-        raise CommandValidationError("Command must include an AWS service (e.g., aws s3)")
-
-    # Optional: Add a deny list for potentially dangerous commands
-    dangerous_commands = ["aws iam create-user", "aws iam create-access-key", "aws ec2 terminate-instances", "aws rds delete-db-instance"]
-    if any(command.startswith(dangerous_cmd) for dangerous_cmd in dangerous_commands):
-        raise CommandValidationError("This command is restricted for security reasons")
-
-
-def validate_pipe_command(pipe_command: str) -> None:
-    """Validate a command that contains pipes.
-
-    This checks both AWS CLI commands and Unix commands within a pipe chain.
-
-    Args:
-        pipe_command: The piped command to validate
-
-    Raises:
-        CommandValidationError: If any command in the pipe is invalid
-    """
-    commands = split_pipe_command(pipe_command)
-
-    if not commands:
-        raise CommandValidationError("Empty command")
-
-    # First command must be an AWS CLI command
-    validate_aws_command(commands[0])
-
-    # Subsequent commands should be valid Unix commands
-    for i, cmd in enumerate(commands[1:], 1):
-        cmd_parts = shlex.split(cmd)
-        if not cmd_parts:
-            raise CommandValidationError(f"Empty command at position {i} in pipe")
-
-        if not validate_unix_command(cmd):
-            raise CommandValidationError(
-                f"Command '{cmd_parts[0]}' at position {i} in pipe is not allowed. Only AWS commands and basic Unix utilities are permitted."
-            )
+# Command validation functions are now imported from aws_mcp_server.security
 
 
 async def execute_aws_command(command: str, timeout: int | None = None) -> CommandResult:
@@ -161,7 +111,10 @@ async def execute_aws_command(command: str, timeout: int | None = None) -> Comma
         return await execute_pipe_command(command, timeout)
 
     # Validate the command
-    validate_aws_command(command)
+    try:
+        validate_aws_command(command)
+    except ValueError as e:
+        raise CommandValidationError(str(e)) from e
 
     # Set timeout
     if timeout is None:
@@ -244,6 +197,8 @@ async def execute_pipe_command(pipe_command: str, timeout: int | None = None) ->
     # Validate the pipe command
     try:
         validate_pipe_command(pipe_command)
+    except ValueError as e:
+        raise CommandValidationError(f"Invalid pipe command: {str(e)}") from e
     except CommandValidationError as e:
         raise CommandValidationError(f"Invalid pipe command: {str(e)}") from e
 
