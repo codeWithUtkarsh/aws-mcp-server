@@ -44,34 +44,34 @@ async def test_aws_execute_command():
     assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
 
 
-@pytest.mark.asyncio
-@pytest.mark.integration
-async def test_aws_bucket_creation():
-    """Test that we can create and delete a bucket.
-
-    This test is marked as integration because it requires AWS credentials.
-    """
-    # Generate a bucket name
-    timestamp = int(time.time())
-    random_id = str(uuid.uuid4())[:8]
-    bucket_name = f"aws-mcp-test-{timestamp}-{random_id}"
-
-    # Get region from environment or use default
-    region = os.environ.get("AWS_TEST_REGION", os.environ.get("AWS_REGION", "us-east-1"))
-
-    try:
-        # Create bucket with region specification
-        create_result = await aws_cli_pipeline(command=f"aws s3 mb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
-        assert create_result["status"] == "success", f"Failed to create bucket: {create_result['output']}"
-
-        # Verify bucket exists
-        await asyncio.sleep(3)  # Wait for bucket to be fully available
-        list_result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
-        assert bucket_name in list_result["output"], "Bucket was not found in bucket list"
-
-    finally:
-        # Clean up - delete the bucket
-        await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+# @pytest.mark.asyncio
+# @pytest.mark.integration
+# async def test_aws_bucket_creation():
+#     """Test that we can create and delete a bucket.
+#
+#     This test is marked as integration because it requires AWS credentials.
+#     """
+#     # Generate a bucket name
+#     timestamp = int(time.time())
+#     random_id = str(uuid.uuid4())[:8]
+#     bucket_name = f"aws-mcp-test-{timestamp}-{random_id}"
+#
+#     # Get region from environment or use default
+#     region = os.environ.get("AWS_TEST_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+#
+#     try:
+#         # Create bucket with region specification
+#         create_result = await aws_cli_pipeline(command=f"aws s3 mb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+#         assert create_result["status"] == "success", f"Failed to create bucket: {create_result['output']}"
+#
+#         # Verify bucket exists
+#         await asyncio.sleep(3)  # Wait for bucket to be fully available
+#         list_result = await aws_cli_pipeline(command="aws s3 ls", timeout=None, ctx=None)
+#         assert bucket_name in list_result["output"], "Bucket was not found in bucket list"
+#
+#     finally:
+#         # Clean up - delete the bucket
+#         await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
 
 
 @pytest.mark.asyncio

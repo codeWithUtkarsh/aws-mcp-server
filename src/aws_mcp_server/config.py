@@ -24,7 +24,7 @@ MAX_OUTPUT_SIZE = int(os.environ.get("AWS_MCP_MAX_OUTPUT", "100000"))
 TRANSPORT = os.environ.get("AWS_MCP_TRANSPORT", "stdio")
 
 # AWS CLI settings
-AWS_PROFILE = os.environ.get("AWS_PROFILE", "default")
+AWS_PROFILE = os.environ.get("AWS_PROFILE", "AdministratorAccess-252628530222")
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
 
 # Security settings

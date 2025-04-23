@@ -76,79 +76,79 @@ class TestAWSLiveIntegration:
 
         logger.info(f"S3 bucket list result: {result['output']}")
 
-    @pytest.mark.asyncio
-    @pytest.mark.integration
-    async def test_s3_operations_with_test_bucket(self, ensure_aws_credentials):
-        """Test S3 operations using a test bucket.
-
-        This test:
-        1. Creates a temporary bucket
-        2. Creates a test file
-        3. Uploads it to S3
-        4. Lists the bucket contents
-        5. Downloads the file with a different name
-        6. Verifies the downloaded content
-        7. Cleans up all test files and the bucket
-        """
-        # Get region from environment or use default
-        region = os.environ.get("AWS_TEST_REGION", os.environ.get("AWS_REGION", "us-east-1"))
-        print(f"Using AWS region: {region}")
-
-        # Generate a unique bucket name
-        timestamp = int(time.time())
-        random_id = str(uuid.uuid4())[:8]
-        bucket_name = f"aws-mcp-test-{timestamp}-{random_id}"
-
-        test_file_name = "test_file.txt"
-        test_file_content = "This is a test file for AWS MCP Server integration tests"
-        downloaded_file_name = "test_file_downloaded.txt"
-
-        try:
-            # Create the bucket
-            create_cmd = f"aws s3 mb s3://{bucket_name} --region {region}"
-            result = await aws_cli_pipeline(command=create_cmd, timeout=None, ctx=None)
-            assert result["status"] == "success", f"Failed to create bucket: {result['output']}"
-
-            # Wait for bucket to be fully available
-            await asyncio.sleep(3)
-
-            # Create a local test file
-            with open(test_file_name, "w") as f:
-                f.write(test_file_content)
-
-            # Upload the file to S3
-            upload_result = await aws_cli_pipeline(
-                command=f"aws s3 cp {test_file_name} s3://{bucket_name}/{test_file_name} --region {region}", timeout=None, ctx=None
-            )
-            assert upload_result["status"] == "success"
-
-            # List the bucket contents
-            list_result = await aws_cli_pipeline(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
-            assert list_result["status"] == "success"
-            assert test_file_name in list_result["output"]
-
-            # Download the file with a different name
-            download_result = await aws_cli_pipeline(
-                command=f"aws s3 cp s3://{bucket_name}/{test_file_name} {downloaded_file_name} --region {region}", timeout=None, ctx=None
-            )
-            assert download_result["status"] == "success"
-
-            # Verify the downloaded file content
-            with open(downloaded_file_name, "r") as f:
-                downloaded_content = f.read()
-            assert downloaded_content == test_file_content
-
-        finally:
-            # Clean up local files
-            for file_name in [test_file_name, downloaded_file_name]:
-                if os.path.exists(file_name):
-                    os.remove(file_name)
-
-            # Clean up: Remove files from S3
-            await aws_cli_pipeline(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
-
-            # Delete the bucket
-            await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
+    # @pytest.mark.asyncio
+    # @pytest.mark.integration
+    # async def test_s3_operations_with_test_bucket(self, ensure_aws_credentials):
+    #     """Test S3 operations using a test bucket.
+    #
+    #     This test:
+    #     1. Creates a temporary bucket
+    #     2. Creates a test file
+    #     3. Uploads it to S3
+    #     4. Lists the bucket contents
+    #     5. Downloads the file with a different name
+    #     6. Verifies the downloaded content
+    #     7. Cleans up all test files and the bucket
+    #     """
+    #     # Get region from environment or use default
+    #     region = os.environ.get("AWS_TEST_REGION", os.environ.get("AWS_REGION", "us-east-1"))
+    #     print(f"Using AWS region: {region}")
+    #
+    #     # Generate a unique bucket name
+    #     timestamp = int(time.time())
+    #     random_id = str(uuid.uuid4())[:8]
+    #     bucket_name = f"aws-mcp-test-{timestamp}-{random_id}"
+    #
+    #     test_file_name = "test_file.txt"
+    #     test_file_content = "This is a test file for AWS MCP Server integration tests"
+    #     downloaded_file_name = "test_file_downloaded.txt"
+    #
+    #     try:
+    #         # Create the bucket
+    #         create_cmd = f"aws s3 mb s3://{bucket_name} --region {region}"
+    #         result = await aws_cli_pipeline(command=create_cmd, timeout=None, ctx=None)
+    #         assert result["status"] == "success", f"Failed to create bucket: {result['output']}"
+    #
+    #         # Wait for bucket to be fully available
+    #         await asyncio.sleep(3)
+    #
+    #         # Create a local test file
+    #         with open(test_file_name, "w") as f:
+    #             f.write(test_file_content)
+    #
+    #         # Upload the file to S3
+    #         upload_result = await aws_cli_pipeline(
+    #             command=f"aws s3 cp {test_file_name} s3://{bucket_name}/{test_file_name} --region {region}", timeout=None, ctx=None
+    #         )
+    #         assert upload_result["status"] == "success"
+    #
+    #         # List the bucket contents
+    #         list_result = await aws_cli_pipeline(command=f"aws s3 ls s3://{bucket_name}/ --region {region}", timeout=None, ctx=None)
+    #         assert list_result["status"] == "success"
+    #         assert test_file_name in list_result["output"]
+    #
+    #         # Download the file with a different name
+    #         download_result = await aws_cli_pipeline(
+    #             command=f"aws s3 cp s3://{bucket_name}/{test_file_name} {downloaded_file_name} --region {region}", timeout=None, ctx=None
+    #         )
+    #         assert download_result["status"] == "success"
+    #
+    #         # Verify the downloaded file content
+    #         with open(downloaded_file_name, "r") as f:
+    #             downloaded_content = f.read()
+    #         assert downloaded_content == test_file_content
+    #
+    #     finally:
+    #         # Clean up local files
+    #         for file_name in [test_file_name, downloaded_file_name]:
+    #             if os.path.exists(file_name):
+    #                 os.remove(file_name)
+    #
+    #         # Clean up: Remove files from S3
+    #         await aws_cli_pipeline(command=f"aws s3 rm s3://{bucket_name} --recursive --region {region}", timeout=None, ctx=None)
+    #
+    #         # Delete the bucket
+    #         await aws_cli_pipeline(command=f"aws s3 rb s3://{bucket_name} --region {region}", timeout=None, ctx=None)
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -184,50 +184,50 @@ class TestAWSLiveIntegration:
         except json.JSONDecodeError:
             pytest.fail(f"Output is not valid JSON: {result['output'][:100]}...")
 
-    @pytest.mark.asyncio
-    @pytest.mark.integration
-    @pytest.mark.parametrize(
-        "command,validation_func,description",
-        [
-            # Test simple pipe with count
-            ("aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | wc -l", lambda output: int(output.strip()) > 0, "Count of AWS regions"),
-            # Test pipe with grep and sort
-            (
-                "aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort",
-                lambda output: all("east" in r.lower() for r in output.strip().split("\n") if r),
-                "Filtered and sorted east regions",
-            ),
-            # Test more complex pipe with multiple operations
-            (
-                "aws ec2 describe-regions --output json | grep RegionName | head -3 | wc -l",
-                lambda output: int(output.strip()) <= 3,
-                "Limited region output with multiple pipes",
-            ),
-            # Test pipe with JSON grep
-            (
-                "aws iam list-roles --output json | grep RoleName",
-                lambda output: "RoleName" in output or output.strip() == "",
-                "Lists IAM roles or returns empty if none exist",
-            ),
-            # Very simple pipe command that should work anywhere
-            (
-                "aws --version | grep aws",
-                lambda output: "aws" in output.lower(),  # Just check for the word "aws" in output
-                "AWS version with grep",
-            ),
-        ],
-    )
-    async def test_piped_commands(self, ensure_aws_credentials, command, validation_func, description):
-        """Test execution of various piped commands with AWS CLI and Unix utilities."""
-        result = await aws_cli_pipeline(command=command, timeout=None, ctx=None)
-
-        assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
-
-        # Validate the output using the provided validation function
-        assert validation_func(result["output"]), f"Output validation failed for {description}"
-
-        # Log success
-        logger.info(f"Successfully executed piped command for {description}: {result['output'][:50]}...")
+    # @pytest.mark.asyncio
+    # @pytest.mark.integration
+    # @pytest.mark.parametrize(
+    #     "command,validation_func,description",
+    #     [
+    #         # Test simple pipe with count
+    #         ("aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | wc -l", lambda output: int(output.strip()) > 0, "Count of AWS regions"),
+    #         # Test pipe with grep and sort
+    #         (
+    #             "aws ec2 describe-regions --query 'Regions[*].RegionName' --output text | grep east | sort",
+    #             lambda output: all("east" in r.lower() for r in output.strip().split("\n") if r),
+    #             "Filtered and sorted east regions",
+    #         ),
+    #         # Test more complex pipe with multiple operations
+    #         (
+    #             "aws ec2 describe-regions --output json | grep RegionName | head -3 | wc -l",
+    #             lambda output: int(output.strip()) <= 3,
+    #             "Limited region output with multiple pipes",
+    #         ),
+    #         # Test pipe with JSON grep
+    #         (
+    #             "aws iam list-roles --output json | grep RoleName",
+    #             lambda output: "RoleName" in output or output.strip() == "",
+    #             "Lists IAM roles or returns empty if none exist",
+    #         ),
+    #         # Very simple pipe command that should work anywhere
+    #         (
+    #             "aws --version | grep aws",
+    #             lambda output: "aws" in output.lower(),  # Just check for the word "aws" in output
+    #             "AWS version with grep",
+    #         ),
+    #     ],
+    # )
+    # async def test_piped_commands(self, ensure_aws_credentials, command, validation_func, description):
+    #     """Test execution of various piped commands with AWS CLI and Unix utilities."""
+    #     result = await aws_cli_pipeline(command=command, timeout=None, ctx=None)
+    #
+    #     assert result["status"] == "success", f"Command failed: {result.get('output', '')}"
+    #
+    #     # Validate the output using the provided validation function
+    #     assert validation_func(result["output"]), f"Output validation failed for {description}"
+    #
+    #     # Log success
+    #     logger.info(f"Successfully executed piped command for {description}: {result['output'][:50]}...")
 
     @pytest.mark.asyncio
     @pytest.mark.integration

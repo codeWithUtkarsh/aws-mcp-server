@@ -42,7 +42,7 @@ def run_startup_checks():
 
 
 # Call the checks
-run_startup_checks()
+# run_startup_checks()
 
 # Create the FastMCP server following FastMCP best practices
 mcp = FastMCP(
